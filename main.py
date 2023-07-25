@@ -5,7 +5,7 @@ import epics
 import json
 
 class StepScan:
-    def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv):
+     def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv):
         self.exposure_time = exposure_time
         self.overall_distance = overall_distance
         self.step_size = step_size
@@ -13,7 +13,7 @@ class StepScan:
         self.motion_stage = epics.PV(motion_stage_pv)
 
     def move_motor_to_position(self, position):
-        self.motion_stage.put(position, wait=True)
+        self.motion_stage.put_wait(position)
 
     def acquire_image(self):
         self.detector.put('Acquire', 1, wait=True)
