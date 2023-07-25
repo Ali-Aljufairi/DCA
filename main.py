@@ -5,7 +5,7 @@ import epics
 import json
 
 class StepScan:
-     def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv):
+    def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv):
         self.exposure_time = exposure_time
         self.overall_distance = overall_distance
         self.step_size = step_size
