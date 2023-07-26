@@ -27,8 +27,12 @@ class StepScan:
 
         
         # Retrieve the image data
+        acquire_time= epics.PV('FLIR5:cam5:AcquireTime').get()
+        acquire_time2= epics.caget('FLIR5:cam5:AcquireTime')
         image_data = epics.PV('FLIR5:image1:ArrayData').get()
         image_data2 = epics.caget('FLIR5:image1:ArrayData')
+        print(f"acquire_time = {acquire_time}")
+        print(f"acquire_time2 = {acquire_time2}")
         print(f"image_data.shape = {image_data}")
         print(f"image_data2.shape = {image_data2}")
         return image_data
