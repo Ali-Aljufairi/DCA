@@ -31,10 +31,25 @@ class StepScan:
         image_data = self.detector.get('FLIR5:image1:ArrayData')
         return image_data
 
+    def acquire_image(self):
+        # Set exposure time
+        self.detector.put('FLIR5:cam5:AcquireTime', self.exposure_time)
+
+        # Start the acquisition
+        self.detector.put('FLIR5:cam5:Acquire', 1)
+
+        # Wait for the acquisition to complete
+        while self.detector.get('FLIR5:cam5:AcquireBusy') == 1:
+            time.sleep(0.1)
+
+        # Retrieve the image data
+        image_data = self.detector.get('FLIR5:image1:ArrayData')
+        return image_data
+
     def save_image(self, image_data, file_name):
         # Reshape image according to predefined size
-        image_size_x = self.detector.get('ArraySizeX_RBV')
-        image_size_y = self.detector.get('ArraySizeY_RBV')
+        image_size_x = self.detector.get('FLIR5:cam5:ArraySizeX_RBV')
+        image_size_y = self.detector.get('FLIR5:cam5:ArraySizeY_RBV')
         image_reshaped = np.reshape(image_data, (image_size_y, image_size_x))
 
         # Create the 'images' directory if it doesn't exist
