@@ -20,10 +20,8 @@ class StepScan:
     def acquire_image(self):
         # Start the acquisition asynchronously
         epics.caput('FLIR5:cam5:Acquire', 1)
-        # self.detector.put('Acquire', 1)
 
-        # Wait for the acquisition to complete
-        while epics.caget('FLIR5:cam5:Acquire') == 1:
+        while epics.caget('FLIR5:cam5:AcquireBusy') == 1:
             time.sleep(0.1)
 
         # Retrieve the image data
