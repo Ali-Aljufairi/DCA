@@ -3,7 +3,7 @@ import time
 import argparse
 import epics
 import json
-
+#test
 class StepScan:
     def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv):
         self.exposure_time = exposure_time
