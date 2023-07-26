@@ -1,5 +1,4 @@
 {
-    "detector_pv": "FLIR5:cam5:",
-    "motion_stage_pv": "micos:m1."
-  }
-  
+  "detector_pv": "FLIR5:cam5:",
+  "motion_stage_pv": "micos:m1."
+}
