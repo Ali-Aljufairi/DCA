@@ -17,11 +17,17 @@ class StepScan:
         while not self.motion_stage.done_moving:  # Wait until the motion is done
             time.sleep(0.1)
 
+   
     def acquire_image(self):
-        self.detector.put('Acquire', 1, wait=True)
+        # Start the acquisition asynchronously
+        self.detector.put('Acquire', 1)
+
+        # Wait for the acquisition to complete
         while self.detector.get('AcquireBusy') == 1:
             time.sleep(0.1)
-        image_data = self.detector.get('ArrayData')
+
+        # Retrieve the image data
+        image_data = self.detector.get('FLIR5:image1:ArrayData')
         return image_data
 
     def save_image(self, image_data, file_name):
