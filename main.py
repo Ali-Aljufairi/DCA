@@ -3,7 +3,7 @@ import time
 import argparse
 import epics
 import json
-#test
+#try2:
 class StepScan:
     def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv):
         self.exposure_time = exposure_time
@@ -19,21 +19,22 @@ class StepScan:
 
     def acquire_image(self):
         # Start the acquisition asynchronously
-        self.detector.put('Acquire', 1)
+        epics.caput('FLIR5:cam5:Acquire', 1)
+        # self.detector.put('Acquire', 1)
 
         # Wait for the acquisition to complete
-        while self.detector.get('AcquireBusy') == 1:
+        while epics.caget('FLIR5:cam5:Acquire') == 1:
             time.sleep(0.1)
 
         # Retrieve the image data
-        image_data = self.detector.get('ArrayData')
+        image_data = epics.caget('FLIR5:image1:ArrayData')
         return image_data
 
 
     def save_image(self, image_data, file_name):
         # Reshape image according to predefined size
-        image_size_x = self.detector.get('ArraySizeX_RBV')
-        image_size_y = self.detector.get('ArraySizeY_RBV')
+        image_size_x = 2448
+        image_size_y = 2048
         image_reshaped = np.reshape(image_data, (image_size_y, image_size_x))
         # Save the image as a PNG file
         np.save(file_name, image_reshaped)
@@ -75,3 +76,4 @@ if __name__ == "__main__":
     parser.add_argument("--config_file", default="config.json", help="JSON file containing PV names. (Default: config.json)")
     args = parser.parse_args()
     main(args)
+
