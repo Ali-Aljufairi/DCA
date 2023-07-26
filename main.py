@@ -26,8 +26,8 @@ class StepScan:
 
     def save_image(self, image_data, file_name):
         # Reshape image according to predefined size
-        image_size_x = self.detector.get('ArraySizeX_RBV')
-        image_size_y = self.detector.get('ArraySizeY_RBV')
+        image_size_x = 2448
+        image_size_y = 2048
         image_reshaped = np.reshape(image_data, (image_size_y, image_size_x))
         # Save the image as a PNG file
         np.save(file_name, image_reshaped)
