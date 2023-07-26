@@ -25,10 +25,12 @@ class StepScan:
         while self.detector.get('AcquireBusy') == 1:
             time.sleep(0.1)
 
-        print(f"self.detector.get('AcquireBusy') = {self.detector.get('AcquireBusy')}")
+        
         # Retrieve the image data
-        image_data = self.detector.get('FLIR5:image1:ArrayData')
+        image_data = epics.PV('FLIR5:image1:ArrayData').get()
+        image_data2 = epics.caget('FLIR5:image1:ArrayData')
         print(f"image_data.shape = {image_data}")
+        print(f"image_data2.shape = {image_data2}")
         return image_data
 
 
