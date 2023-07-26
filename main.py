@@ -3,8 +3,6 @@ import time
 import argparse
 import epics
 import json
-import os
-import matplotlib.pyplot as plt
 
 class StepScan:
     def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv):
@@ -12,72 +10,39 @@ class StepScan:
         self.overall_distance = overall_distance
         self.step_size = step_size
         self.detector = epics.PV(detector_pv)
-        self.motion_stage = epics.PV(motion_stage_pv)
+        self.motion_stage = epics.Motor(motion_stage_pv)
 
     def move_motor_to_position(self, position):
-        self.motion_stage.move(position)
+        self.motion_stage.put(position, wait=True)  # Use put to move the motor to the desired position
         while not self.motion_stage.done_moving:  # Wait until the motion is done
             time.sleep(0.1)
 
     def acquire_image(self):
-        # Start the acquisition asynchronously
-        self.detector.put('Acquire', 1)
-
-        # Wait for the acquisition to complete
+        self.detector.put('Acquire', 1, wait=True)
         while self.detector.get('AcquireBusy') == 1:
             time.sleep(0.1)
-
-        # Retrieve the image data
-        image_data = self.detector.get('FLIR5:image1:ArrayData')
-        return image_data
-
-    def acquire_image(self):
-        # Set exposure time
-        self.detector.put('FLIR5:cam5:AcquireTime', self.exposure_time)
-
-        # Start the acquisition
-        self.detector.put('FLIR5:cam5:Acquire', 1)
-
-        # Wait for the acquisition to complete
-        while self.detector.get('FLIR5:cam5:AcquireBusy') == 1:
-            time.sleep(0.1)
-
-        # Retrieve the image data
-        image_data = self.detector.get('FLIR5:image1:ArrayData')
+        image_data = self.detector.get('ArrayData')
         return image_data
 
     def save_image(self, image_data, file_name):
         # Reshape image according to predefined size
-        image_size_x = 2248
-        image_size_y = 2048
+        image_size_x = self.detector.get('ArraySizeX_RBV')
+        image_size_y = self.detector.get('ArraySizeY_RBV')
         image_reshaped = np.reshape(image_data, (image_size_y, image_size_x))
-
-        # Create the 'images' directory if it doesn't exist
-        if not os.path.exists('images'):
-            os.makedirs('images')
-
-        # Save the image in the 'images' folder
-        image_file_path = os.path.join('images', file_name)
-        plt.imsave(image_file_path, image_reshaped, cmap='gray')
+        # Save the image as a PNG file
+        np.save(file_name, image_reshaped)
 
     def start_step_scan(self):
         num_steps = int(self.overall_distance / self.step_size)
         with open('data.xdi', 'w') as data_file:
-            self.write_xdi_header(data_file)
+            data_file.write("# Data columns: Position Current Time\n")
             for step in range(num_steps):
                 target_position = step * self.step_size
                 self.move_motor_to_position(target_position)
                 image_data = self.acquire_image()
                 timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-                data_file.write(f"{target_position} {self.motion_stage.get()} {timestamp}\n")
+                data_file.write(f"{target_position} {self.motion_stage.get('RBV')} {timestamp}\n")
 
-                # Save the acquired image
-                image_file_name = f"image_{step}.png"
-                self.save_image(image_data, image_file_name)
-
-    def write_xdi_header(self, data_file):
-        data_file.write("# XDI/1.0 SED_XAFS/0.9\n")
-        data_file.write("# Facility.name: SESAME Synchrotron-light\n")
 
 def main(args):
     # Read PV names from the JSON file
