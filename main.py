@@ -20,9 +20,9 @@ class StepScan:
             time.sleep(0.1)
 
     def acquire_image(self):
-        image_data = self.detector.get('ArrayData')
-        image_size_x = self.detector.get('ArraySizeX_RBV')
-        image_size_y = self.detector.get('ArraySizeY_RBV')
+        image_data = self.detector.get('FLIR:image1:ArrayData')
+        image_size_x = 2448
+        image_size_y = 2048
         image_reshaped = np.reshape(image_data, (image_size_y, image_size_x))
         return image_reshaped
 
