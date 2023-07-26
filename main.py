@@ -25,6 +25,7 @@ class StepScan:
         while self.detector.get('AcquireBusy') == 1:
             time.sleep(0.1)
 
+        print(f"self.detector.get('AcquireBusy') = {self.detector.get('AcquireBusy')}")
         # Retrieve the image data
         image_data = self.detector.get('FLIR5:image1:ArrayData')
         print(f"image_data.shape = {image_data}")
