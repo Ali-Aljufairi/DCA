@@ -3,8 +3,9 @@ import time
 import argparse
 import epics
 import json
+import os
 import matplotlib.pyplot as plt
-import os 
+
 class StepScan:
     def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv):
         self.exposure_time = exposure_time
@@ -27,7 +28,7 @@ class StepScan:
             time.sleep(0.1)
 
         # Retrieve the image data
-        image_data = self.detector.get('ArrayData')
+        image_data = self.detector.get('FLIR5:image1:ArrayData')
         return image_data
 
     def save_image(self, image_data, file_name):
@@ -43,7 +44,6 @@ class StepScan:
         # Save the image in the 'images' folder
         image_file_path = os.path.join('images', file_name)
         plt.imsave(image_file_path, image_reshaped, cmap='gray')
-
 
     def start_step_scan(self):
         num_steps = int(self.overall_distance / self.step_size)
@@ -63,6 +63,8 @@ class StepScan:
     def write_xdi_header(self, data_file):
         data_file.write("# XDI/1.0 SED_XAFS/0.9\n")
         data_file.write("# Facility.name: SESAME Synchrotron-light\n")
+        data_file.write(f"# Scan.edge_energy: {your_edge_energy_value}\n")
+        data_file.write(f"# Scan.number: 1/1 -- intervals: {your_intervals_value}, samples: {your_samples_value}\n")
 
 def main(args):
     # Read PV names from the JSON file
