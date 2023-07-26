@@ -3,18 +3,18 @@ import time
 import argparse
 import epics
 import json
-#test
+
 class StepScan:
     def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv):
         self.exposure_time = exposure_time
         self.overall_distance = overall_distance
         self.step_size = step_size
         self.detector = epics.PV(detector_pv)
-        self.motion_stage = epics.Motor(motion_stage_pv)
+        self.motion_stage = epics.PV(motion_stage_pv)
 
     def move_motor_to_position(self, position):
-        self.motion_stage.move(position)
-        while not self.motion_stage.done_moving:  # Wait until the motion is done
+        self.motion_stage.put(position)
+        while abs(self.motion_stage.get() - position) > 1e-6:  # Wait until the motion is done
             time.sleep(0.1)
 
     def acquire_image(self):
@@ -29,7 +29,6 @@ class StepScan:
         image_data = self.detector.get('ArrayData')
         return image_data
 
-
     def save_image(self, image_data, file_name):
         # Reshape image according to predefined size
         image_size_x = self.detector.get('ArraySizeX_RBV')
@@ -41,14 +40,18 @@ class StepScan:
     def start_step_scan(self):
         num_steps = int(self.overall_distance / self.step_size)
         with open('data.xdi', 'w') as data_file:
-            data_file.write("# Data columns: Position Current Time\n")
+            self.write_xdi_header(data_file)
             for step in range(num_steps):
                 target_position = step * self.step_size
                 self.move_motor_to_position(target_position)
                 image_data = self.acquire_image()
                 timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-                data_file.write(f"{target_position} {self.motion_stage.get('RBV')} {timestamp}\n")
+                data_file.write(f"{target_position} {self.motion_stage.get()} {timestamp}\n")
 
+    def write_xdi_header(self, data_file):
+
+        data_file.write("# XDI/1.0 SED_XAFS/0.9\n")
+        data_file.write("# Facility.name: SESAME Synchrotron-light\n")
 
 def main(args):
     # Read PV names from the JSON file
