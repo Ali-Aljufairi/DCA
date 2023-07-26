@@ -48,8 +48,8 @@ class StepScan:
 
     def save_image(self, image_data, file_name):
         # Reshape image according to predefined size
-        image_size_x = self.detector.get('FLIR5:cam5:ArraySizeX_RBV')
-        image_size_y = self.detector.get('FLIR5:cam5:ArraySizeY_RBV')
+        image_size_x = 2248
+        image_size_y = 2048
         image_reshaped = np.reshape(image_data, (image_size_y, image_size_x))
 
         # Create the 'images' directory if it doesn't exist
