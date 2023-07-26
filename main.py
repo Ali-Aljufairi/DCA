@@ -3,7 +3,7 @@ import time
 import argparse
 import epics
 import json
-#try2:
+#test
 class StepScan:
     def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv):
         self.exposure_time = exposure_time
@@ -25,25 +25,15 @@ class StepScan:
         while self.detector.get('AcquireBusy') == 1:
             time.sleep(0.1)
 
-        image_data3 = self.detector.get('ArrayData')
         # Retrieve the image data
-        acquire_time= epics.PV('FLIR5:cam5:AcquireTime').get()
-        acquire_time2= epics.caget('FLIR5:cam5:AcquireTime')
-        image_data = epics.PV('FLIR5:image1:ArrayData').get()
-        image_data2 = epics.caget('FLIR5:image1:ArrayData')
-
-        print(f"acquire_time = {acquire_time}")
-        print(f"acquire_time2 = {acquire_time2}")
-        print(f"image_data.shape = {image_data}")
-        print(f"image_data2.shape = {image_data2}")
-        print(f"image_data3.shape = {image_data3}")
+        image_data = self.detector.get('ArrayData')
         return image_data
 
 
     def save_image(self, image_data, file_name):
         # Reshape image according to predefined size
-        image_size_x = 2448
-        image_size_y = 2048
+        image_size_x = self.detector.get('ArraySizeX_RBV')
+        image_size_y = self.detector.get('ArraySizeY_RBV')
         image_reshaped = np.reshape(image_data, (image_size_y, image_size_x))
         # Save the image as a PNG file
         np.save(file_name, image_reshaped)
