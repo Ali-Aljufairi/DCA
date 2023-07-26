@@ -4,6 +4,7 @@ import argparse
 import epics
 import json
 import os
+from PIL import Image
 #try2:
 class StepScan:
     def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv):
@@ -41,9 +42,10 @@ class StepScan:
         image_size_y = 2048
         image_reshaped = np.reshape(image_data, (image_size_y, image_size_x))
 
-        # Save the image in the "images" folder
-        file_path = os.path.join("images", file_name)
-        np.save(file_path, image_reshaped)
+        # Save the image in the "images" folder as PNG
+        file_path = os.path.join("images", file_name.replace("npy", "png"))
+        image_pil = Image.fromarray(image_reshaped)
+        image_pil.save(file_path)
 
     def start_step_scan(self):
         num_steps = int(self.overall_distance / self.step_size)
