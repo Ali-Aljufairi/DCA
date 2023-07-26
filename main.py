@@ -19,7 +19,7 @@ class StepScan:
 
     def acquire_image(self):
         # Start the acquisition asynchronously
-        self.detector.put('Acquire', 1, **{'wait': False})
+        self.detector.put('Acquire', 1)
 
         # Wait for the acquisition to complete
         while self.detector.get('AcquireBusy') == 1:
@@ -28,6 +28,7 @@ class StepScan:
         # Retrieve the image data
         image_data = self.detector.get('ArrayData')
         return image_data
+
 
     def save_image(self, image_data, file_name):
         # Reshape image according to predefined size
