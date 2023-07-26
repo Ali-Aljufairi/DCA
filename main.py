@@ -10,13 +10,12 @@ class StepScan:
         self.overall_distance = overall_distance
         self.step_size = step_size
         self.detector = epics.PV(detector_pv)
-        self.motion_stage = epics.PV(motion_stage_pv)
+        self.motion_stage = epics.Motor(motion_stage_pv)
 
     def move_motor_to_position(self, position):
-        self.motion_stage.put(position)
-        while abs(self.motion_stage.get() - position) > 1e-6:  # Wait until the motion is done
-            time.sleep(0.1) 
-
+        self.motion_stage.move(position)
+        while not self.motion_stage.done_moving:  # Wait until the motion is done
+            time.sleep(0.1)
     def acquire_image(self):
         self.detector.put('Acquire', 1, wait=True)
         while self.detector.get('AcquireBusy') == 1:
