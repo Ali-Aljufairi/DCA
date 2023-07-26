@@ -3,7 +3,8 @@ import time
 import argparse
 import epics
 import json
-
+import matplotlib.pyplot as plt
+import os 
 class StepScan:
     def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv):
         self.exposure_time = exposure_time
@@ -34,8 +35,15 @@ class StepScan:
         image_size_x = self.detector.get('ArraySizeX_RBV')
         image_size_y = self.detector.get('ArraySizeY_RBV')
         image_reshaped = np.reshape(image_data, (image_size_y, image_size_x))
-        # Save the image as a PNG file
-        np.save(file_name, image_reshaped)
+
+        # Create the 'images' directory if it doesn't exist
+        if not os.path.exists('images'):
+            os.makedirs('images')
+
+        # Save the image in the 'images' folder
+        image_file_path = os.path.join('images', file_name)
+        plt.imsave(image_file_path, image_reshaped, cmap='gray')
+
 
     def start_step_scan(self):
         num_steps = int(self.overall_distance / self.step_size)
@@ -48,8 +56,11 @@ class StepScan:
                 timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                 data_file.write(f"{target_position} {self.motion_stage.get()} {timestamp}\n")
 
-    def write_xdi_header(self, data_file):
+                # Save the acquired image
+                image_file_name = f"image_{step}.png"
+                self.save_image(image_data, image_file_name)
 
+    def write_xdi_header(self, data_file):
         data_file.write("# XDI/1.0 SED_XAFS/0.9\n")
         data_file.write("# Facility.name: SESAME Synchrotron-light\n")
 
