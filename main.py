@@ -3,7 +3,8 @@ import time
 import argparse
 import epics
 import json
-
+import os 
+from PIL import Image
 class StepScan:
     def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv):
         self.exposure_time = exposure_time
@@ -13,30 +14,33 @@ class StepScan:
         self.motion_stage = epics.Motor(motion_stage_pv)
 
     def move_motor_to_position(self, position):
-        self.motion_stage.put(position, wait=True)  # Use put to move the motor to the desired position
+        self.motion_stage.put(position, position, wait=True)
         while not self.motion_stage.done_moving:  # Wait until the motion is done
             time.sleep(0.1)
-
-   
-    def acquire_image(self):
-        # Start the acquisition asynchronously
-        self.detector.put('Acquire', 1)
-
-        # Wait for the acquisition to complete
-        while self.detector.get('AcquireBusy') == 1:
-            time.sleep(0.1)
-
-        # Retrieve the image data
-        image_data = self.detector.get('FLIR5:image1:ArrayData')
-        return image_data
-
-    def save_image(self, image_data, file_name):
-        # Reshape image according to predefined size
+    def save_image(self, image_data):
+  
         image_size_x = 2448
         image_size_y = 2048
         image_reshaped = np.reshape(image_data, (image_size_y, image_size_x))
-        # Save the image as a PNG file
-        np.save(file_name, image_reshaped)
+        return image_reshaped
+
+    def save_image_to_file(self, image_data, step_num):
+
+    # Create folder
+        if not os.path.exists('images'):
+            os.makedirs('images')
+
+    # Reshape 
+        image_reshaped = self.save_image(image_data)
+    
+    # Convert and save as PNG
+        image = Image.fromarray(image_reshaped)
+        image_filename = f"images/image_{step_num}.png"
+        image.save(image_filename)
+   
+   
+
+   
 
     def start_step_scan(self):
         num_steps = int(self.overall_distance / self.step_size)
@@ -46,6 +50,7 @@ class StepScan:
                 target_position = step * self.step_size
                 self.move_motor_to_position(target_position)
                 image_data = self.acquire_image()
+                self.save_image_to_file(image_data, step)
                 timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                 data_file.write(f"{target_position} {self.motion_stage.get('RBV')} {timestamp}\n")
 
