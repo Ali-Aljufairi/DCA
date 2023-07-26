@@ -55,6 +55,9 @@ class StepScan:
                 image_data = self.acquire_image()
                 timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                 data_file.write(f"{target_position} {self.motion_stage.get('RBV')} {timestamp}\n")
+                # Save the acquired image with a file name based on the timestamp
+                file_name = f"image_{timestamp}.npy"
+                self.save_image(image_data, file_name)
 
 
 def main(args):
