@@ -19,7 +19,7 @@ class StepScan:
 
     def acquire_image(self):
         # Start the acquisition asynchronously
-        self.detector.put('Acquire', 1, wait=False)
+        self.detector.put('Acquire', 1, **{'wait': False})
 
         # Wait for the acquisition to complete
         while self.detector.get('AcquireBusy') == 1:
