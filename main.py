@@ -15,8 +15,8 @@ class StepScan:
         self.motion_stage = epics.PV(motion_stage_pv)
 
     def move_motor_to_position(self, position):
-        self.motion_stage.put(position)
-        while abs(self.motion_stage.get() - position) > 1e-6:  # Wait until the motion is done
+        self.motion_stage.move(position)
+        while not self.motion_stage.done_moving:  # Wait until the motion is done
             time.sleep(0.1)
 
     def acquire_image(self):
