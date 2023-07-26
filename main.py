@@ -63,8 +63,6 @@ class StepScan:
     def write_xdi_header(self, data_file):
         data_file.write("# XDI/1.0 SED_XAFS/0.9\n")
         data_file.write("# Facility.name: SESAME Synchrotron-light\n")
-        data_file.write(f"# Scan.edge_energy: {your_edge_energy_value}\n")
-        data_file.write(f"# Scan.number: 1/1 -- intervals: {your_intervals_value}, samples: {your_samples_value}\n")
 
 def main(args):
     # Read PV names from the JSON file
