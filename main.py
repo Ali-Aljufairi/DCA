@@ -53,7 +53,7 @@ class StepScan:
         image_pil = Image.fromarray(image_reshaped)
         image_pil.save(file_path)
 
-    def acquire_image(self, acq_mode, trigger_mode, trigger_source, trigger_software, image_counter, image_data):
+    def acquire_image(self, trigger_software, image_counter, image_data):
         # Trigger the software trigger to initiate image acquisition
         epics.caput(trigger_software, 1)
 
