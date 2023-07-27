@@ -1,5 +1,16 @@
 {
   "detector_pv": "FLIR5:cam5:",
   "motion_stage_pv": "micos:m1.",
-  "camera_acq_pv" : "FLIR5:cam5:Acquire"
+  "camera_acq_pv" : "FLIR5:cam5:Acquire",
+  "image_size_x" :  "FLIR5:cam5:ArraySizeX_RBV",
+  "image_size_y" :  "FLIR5:cam5:ArraySizeY_RBV",
+  "image_counter" : "FLIR5:cam5:ArrayCounter_RBV",
+  "num_images" : "FLIR5:cam5:NumImages",
+  "acq_mode": "FLIR5:cam5:ImageMode",
+  "start_acq" : "FLIR5:cam5:Acquire",
+  "acq_status" : "FLIR5:cam5:AcquireBusy",
+  "trigger_mode" : "FLIR5:cam5:TriggerMode",
+  "trigger_source" : "FLIR5:cam5:TriggerSource",
+  "trigger_software" : "FLIR5:cam5:TriggerSoftware",
+  "image_data" : "FLIR5:image1:ArrayData"
 }

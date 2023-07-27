@@ -5,42 +5,53 @@ import epics
 import json
 import os
 from PIL import Image
-#try2:
 class StepScan:
-    def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv,camera_acq_pv):
+    def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv,camera_acq_pv, image_size_x, image_size_y, image_counter, num_images, acq_mode, start_acq, acq_status, trigger_mode, trigger_source, trigger_software, image_data):
         self.exposure_time = exposure_time
         self.overall_distance = overall_distance
         self.step_size = step_size
         self.detector = epics.PV(detector_pv)
         self.motion_stage = epics.Motor(motion_stage_pv)
         self.camera_acq_pv = camera_acq_pv
+        self.image_size_x = image_size_x
+        self.image_size_y = image_size_y
+        self.image_counter = image_counter
+        self.num_images = num_images
+        self.acq_mode = acq_mode
+        self.start_acq = start_acq
+        self.acq_status = acq_status
+        self.trigger_mode = trigger_mode
+        self.trigger_source = trigger_source
+        self.trigger_software = trigger_software
+        self.image_data = image_data
+
 
     def move_motor_to_position(self, position):
         self.motion_stage.move(position)
         while not self.motion_stage.done_moving:  # Wait until the motion is done
             time.sleep(0.1)
 
-    def acquire_image(self, camera_acq_pv):
+    def acquire_image(self, camera_acq_pv,acq_status,image_data):
         # Start the acquisition asynchronously
         epics.caput(camera_acq_pv, 1)
 
-        while epics.caget('FLIR5:cam5:AcquireBusy') == 1:
+        while epics.caget(acq_status) == 1:
             print("Acquiring image...")
             time.sleep(0.1)
 
         # Retrieve the image data
-        image_data = epics.caget('FLIR5:image1:ArrayData')
+        image_data = epics.caget(image_data)
         return image_data
 
 
-    def save_image(self, image_data, file_name):
+    def save_image(self, image_data, file_name,image_size_x,image_size_y):
         # Create the "images" directory if it does not exist
         if not os.path.exists("images"):
             os.makedirs("images")
 
         # Reshape image according to predefined size
-        image_size_x = 2448
-        image_size_y = 2048
+        image_size_x = epics.caget(image_size_x)
+        image_size_y = epics.caget(image_size_y) 
         image_reshaped = np.reshape(image_data, (image_size_y, image_size_x))
 
         # Save the image in the "images" folder as PNG
@@ -56,7 +67,7 @@ class StepScan:
                 target_position = step * self.step_size
                 self.move_motor_to_position(target_position)
                 print(f"target pos:        {target_position}")
-                image_data = self.acquire_image(self.camera_acq_pv)
+                image_data = self.acquire_image(self.camera_acq_pv,self.acq_status,self.image_data)
                 timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                 data_file.write(f"{target_position}    {self.motion_stage.get('RBV')}    {timestamp}\n")
                 # Save the acquired image with a file name based on the timestamp
@@ -71,6 +82,17 @@ def main(args):
         detector_pv = config.get("detector_pv")
         motion_stage_pv = config.get("motion_stage_pv")
         camera_acq_pv = config.get("camera_acq_pv")
+        image_size_x = config.get("image_size_x")
+        image_size_y = config.get("image_size_y")
+        image_counter = config.get("image_counter")
+        num_images = config.get("num_images")
+        acq_mode = config.get("acq_mode")
+        start_acq = config.get("start_acq")
+        acq_status = config.get("acq_status")
+        trigger_mode = config.get("trigger_mode")
+        trigger_source = config.get("trigger_source")
+        trigger_software = config.get("trigger_software")
+        image_data = config.get("image_data")
 
     step_scan = StepScan(
         args.exposure_time,
@@ -78,7 +100,20 @@ def main(args):
         args.step_size,
         detector_pv,
         motion_stage_pv,
-        camera_acq_pv
+        camera_acq_pv,
+        image_size_x,
+        image_size_y,
+        image_counter,
+        num_images,
+        acq_mode,
+        start_acq,
+        acq_status,
+        trigger_mode,
+        trigger_source,
+        trigger_software,
+        image_data
+
+
     )
     step_scan.move_motor_to_position(0)  # Move to the home position (position 0)
     step_scan.start_step_scan()
