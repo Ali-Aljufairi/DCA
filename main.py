@@ -78,7 +78,7 @@ class StepScan:
                 target_position = step * self.step_size
                 self.move_motor_to_position(target_position)
                 print(f"target pos:        {target_position}")
-                image_data = self.acquire_image(self.acq_mode, self.trigger_mode, self.trigger_source, self.trigger_software, self.image_counter, self.image_data)
+                image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data)
                 timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                 data_file.write(f"{target_position}    {self.motion_stage.get('RBV')}    {timestamp}\n")
                 file_name = f"image_{timestamp}.png"
