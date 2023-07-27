@@ -4,6 +4,7 @@ import argparse
 import epics
 import json
 import os
+import threading
 from PIL import Image
 class StepScan:
     def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv,camera_acq_pv, image_size_x, image_size_y, image_counter, num_images, acq_mode, start_acq, acq_status, trigger_mode, trigger_source, trigger_software, image_data):
@@ -31,17 +32,46 @@ class StepScan:
         while not self.motion_stage.done_moving:  # Wait until the motion is done
             time.sleep(0.1)
 
-    def acquire_image(self, camera_acq_pv,acq_status,image_data):
-        # Start the acquisition asynchronously
-        epics.caput(camera_acq_pv, 1)
+    def acquire_image(self, camera_acq_pv, acq_status, image_data):
+        # Function to acquire image asynchronously
 
-        while epics.caget(acq_status) == 1:
-            print("Acquiring image...")
-            time.sleep(0.1)
+        # Set acquisition mode to continuous
+        epics.caput(self.acq_mode, 1)
+        # Set trigger mode to "On"
+        epics.caput(self.trigger_mode, 1)
+        # Set trigger source to "0" (internal)
+        epics.caput(self.trigger_source, 0)
+        # Set trigger software to "1" (trigger)
+        epics.caput(self.trigger_software, 1)
 
-        # Retrieve the image data
-        image_data = epics.caget(image_data)
-        return image_data
+        def image_acquisition_thread():
+            # Thread function to acquire the image
+            epics.caput(camera_acq_pv, 1)
+            while epics.caget(acq_status) == 1:
+                print("Acquiring image...")
+                time.sleep(0.1)
+
+            # Retrieve the image data
+            image_data = epics.caget('FLIR5:image1:ArrayData')
+
+            # Save the acquired image with a file name based on the timestamp (if needed)
+            # file_name = f"image_{time.time()}.png"
+            # self.save_image(image_data, file_name)
+
+        # Create and start the image acquisition thread
+        image_thread = threading.Thread(target=image_acquisition_thread)
+        image_thread.start()
+
+        # Check whether the image counter changed or not (for demonstration purposes)
+        initial_image_counter = epics.caget(self.image_counter)
+        time.sleep(0.5)  # Wait for a short time to allow image acquisition to start
+        current_image_counter = epics.caget(self.image_counter)
+
+        if current_image_counter != initial_image_counter:
+            print("Image acquisition has started.")
+        else:
+            print("Image acquisition has not started yet.")
+
 
 
     def save_image(self, image_data, file_name,image_size_x,image_size_y):
