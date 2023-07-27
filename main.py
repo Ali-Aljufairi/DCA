@@ -38,8 +38,6 @@ class StepScan:
 
         # Set the trigger source to 0 (software triggering)
         epics.caput(self.trigger_source, 0)
-        epics.caget(self.image_size_x)
-        epics.caget(self.image_size_y)
 
     def move_motor_to_position(self, position):
         self.motion_stage.move(position)
