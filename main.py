@@ -75,6 +75,8 @@ class StepScan:
         num_steps = int(self.overall_distance / self.step_size)
         with open('data.xdi', 'w') as data_file:
             data_file.write("SESAME synchrotron-light\n")
+            data_file.write("Scan performed by: Ali Redha\n")
+            data_file.write("Experiment: Step Scan\n")
             data_file.write("# Data columns: Position Current Time\n")
 
             for step in range(num_steps):
