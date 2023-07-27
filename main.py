@@ -8,7 +8,9 @@ from PIL import Image
 import threading
 
 class StepScan:
-    def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv, camera_acq_pv, image_size_x, image_size_y, image_counter, num_images, acq_mode, start_acq, acq_status, trigger_mode, trigger_source, trigger_software, image_data):
+    def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv, camera_acq_pv,
+                 image_size_x, image_size_y, image_counter, num_images, acq_mode, start_acq, acq_status,
+                 trigger_mode, trigger_source, trigger_software, image_data):
         self.exposure_time = exposure_time
         self.overall_distance = overall_distance
         self.step_size = step_size
@@ -27,7 +29,17 @@ class StepScan:
         self.trigger_software = trigger_software
         self.image_data = image_data
 
-    def move_motor_to_position(self, position):
+        # Set the acquisition mode to multiple
+        epics.caput(self.acq_mode, 1)
+
+        # Enable the trigger mode to start the acquisition
+        epics.caput(self.trigger_mode, 1)
+        epics.caput(self.camera_acq_pv, 1)
+
+        # Set the trigger source to 0 (software triggering)
+        epics.caput(self.trigger_source, 0)
+
+       def move_motor_to_position(self, position):
         self.motion_stage.move(position)
         while not self.motion_stage.done_moving:
             time.sleep(0.1)
@@ -42,14 +54,17 @@ class StepScan:
         image_pil.save(file_path)
 
     def acquire_image(self, acq_mode, trigger_mode, trigger_source, trigger_software, image_counter, image_data):
-        # Set the acquisition mode to continuous
+        # Set the acquisition mode to multiple
         epics.caput(acq_mode, 1)
 
         # Enable the trigger mode to start the acquisition
+
         epics.caput(trigger_mode, 1)
+        epics.caput(camera_acq_pv, 1)
 
         # Set the trigger source to 0 (software triggering)
         epics.caput(trigger_source, 0)
+
 
         # Trigger the software trigger to initiate image acquisition
         epics.caput(trigger_software, 1)
