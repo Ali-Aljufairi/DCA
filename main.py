@@ -41,60 +41,31 @@ class StepScan:
         image_pil = Image.fromarray(image_reshaped)
         image_pil.save(file_path)
 
-    def acquire_image(self, camera_acq_pv, acq_status, image_data):
-        # Function to acquire image asynchronously
+    def acquire_image(self, acq_mode, trigger_mode, trigger_source, trigger_software, image_counter, image_data):
+        # Set the acquisition mode to continuous
+        epics.caput(acq_mode, 1)
 
-        # Set acquisition mode to multiple
-        epics.caput(self.acq_mode, 1)
-        # Set trigger mode to "On"
-        epics.caput(self.trigger_mode, 1)
-        # Set trigger source to "0" (internal)
-        epics.caput(self.trigger_source, 0)
-        # Set trigger software to "1" (trigger)
-        epics.caput(self.trigger_software, 1)
+        # Enable the trigger mode to start the acquisition
+        epics.caput(trigger_mode, 1)
 
-        def check_acquisition_started():
-            # Thread function to check if image acquisition has started
-            initial_image_counter = epics.caget(self.image_counter)
-            time.sleep(0.5)  # Wait for a short time to allow image acquisition to start
-            current_image_counter = epics.caget(self.image_counter)
+        # Set the trigger source to 0 (software triggering)
+        epics.caput(trigger_source, 0)
 
-            if current_image_counter != initial_image_counter:
-                print("Image acquisition has started.")
-            else:
-                print("Image acquisition has not started yet.")
+        # Trigger the software trigger to initiate image acquisition
+        epics.caput(trigger_software, 1)
 
-        # Create and start the thread to check image acquisition
-        check_acquisition_thread = threading.Thread(target=check_acquisition_started)
-        check_acquisition_thread.start()
-
-        def acquisition_callback(value, **kwargs):
-            # Callback function to monitor the acquisition status
-            if value == 0:
-                print("Image acquisition is complete.")
-
-        # Register the acquisition callback
-        callback_id = epics.camonitor(acq_status, callback=acquisition_callback)
-
-        # Start the image acquisition using software trigger
-        epics.caput(camera_acq_pv, 1)
-
-        # Optionally, you can add a delay here to wait for the acquisition to complete if needed
-        # time.sleep(10)  # Wait for 10 seconds (adjust as needed)
-
-        # Unregister the callback when image acquisition is complete
-        epics.camonitor_clear(callback_id)
+        # Wait for the image counter to change, indicating a new image has been acquired
+        initial_counter = epics.caget(image_counter)
+        while True:
+            time.sleep(0.1)
+            current_counter = epics.caget(image_counter)
+            if current_counter != initial_counter:
+                break
 
         # Retrieve the image data
         image_data = epics.caget(image_data)
-
-        # Save the acquired image with a file name based on the timestamp (if needed)
-        # timestamp = time.strftime("%Y%m%d_%H%M%S", time.localtime())
-        # file_name = f"image_{timestamp}.png"
-        # self.save_image(image_data, file_name, self.image_size_x, self.image_size_y)
-
-        # Return the acquired image data (if needed)
         return image_data
+
 
     def start_step_scan(self):
         num_steps = int(self.overall_distance / self.step_size)
@@ -104,12 +75,11 @@ class StepScan:
                 target_position = step * self.step_size
                 self.move_motor_to_position(target_position)
                 print(f"target pos:        {target_position}")
-                image_data = self.acquire_image(self.camera_acq_pv, self.acq_status, self.image_data)
+                image_data = self.acquire_image(self.acq_mode, self.trigger_mode, self.trigger_source, self.trigger_software, self.image_counter, self.image_data)
                 timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                 data_file.write(f"{target_position}    {self.motion_stage.get('RBV')}    {timestamp}\n")
-                # Save the acquired image with a file name based on the timestamp
-                # file_name = f"image_{timestamp}.npy"
-                # self.save_image(image_data, file_name, self.image_size_x, self.image_size_y)
+                file_name = f"image_{timestamp}.png"
+                self.save_image(image_data, file_name) 
 
 def main(args):
     with open(args.config_file) as json_file:
