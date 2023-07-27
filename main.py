@@ -13,6 +13,7 @@ class StepScan:
         self.step_size = step_size
         self.detector = epics.PV(detector_pv)
         self.motion_stage = epics.Motor(motion_stage_pv)
+        self.camera_acq_pv = camera_acq_pv
 
     def move_motor_to_position(self, position):
         self.motion_stage.move(position)
@@ -55,7 +56,7 @@ class StepScan:
                 target_position = step * self.step_size
                 self.move_motor_to_position(target_position)
                 print(f"target pos:        {target_position}")
-                image_data = self.acquire_image()
+                image_data = self.acquire_image(self.camera_acq_pv)
                 timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                 data_file.write(f"{target_position}    {self.motion_stage.get('RBV')}    {timestamp}\n")
                 # Save the acquired image with a file name based on the timestamp
