@@ -49,8 +49,8 @@ class StepScan:
     def save_image(self, image_data, file_name, image_size_x, image_size_y):
         if not os.path.exists("images"):
             os.makedirs("images")
-        image_size_x= int(image_size_x)
-        image_size_y= int(image_size_y)
+        image_size_x= int(epics.caget(image_size_x))
+        image_size_y= int(epics.caget(image_size_y))
         image_reshaped = np.reshape(image_data, (image_size_y, image_size_x))
         file_path = os.path.join("images", file_name.replace("npy", "png"))
         image_pil = Image.fromarray(image_reshaped)
