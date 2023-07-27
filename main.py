@@ -17,8 +17,8 @@ class StepScan:
         self.detector = epics.PV(detector_pv)
         self.motion_stage = epics.Motor(motion_stage_pv)
         self.camera_acq_pv = camera_acq_pv
-        self.image_size_x = image_size_x
-        self.image_size_y = image_size_y
+        self.image_size_x = int(epics.caget(image_size_x))
+        self.image_size_y = int(epics.caget(image_size_y))
         self.image_counter = image_counter
         self.num_images = num_images
         self.acq_mode = acq_mode
@@ -49,8 +49,6 @@ class StepScan:
     def save_image(self, image_data, file_name, image_size_x, image_size_y):
         if not os.path.exists("images"):
             os.makedirs("images")
-        image_size_x= int(epics.caget(image_size_x))
-        image_size_y= int(epics.caget(image_size_y))
         image_reshaped = np.reshape(image_data, (image_size_y, image_size_x))
         file_path = os.path.join("images", file_name.replace("npy", "png"))
         image_pil = Image.fromarray(image_reshaped)
