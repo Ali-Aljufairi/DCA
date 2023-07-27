@@ -7,7 +7,7 @@ import os
 from PIL import Image
 #try2:
 class StepScan:
-    def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv):
+    def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv,camera_acq_pv):
         self.exposure_time = exposure_time
         self.overall_distance = overall_distance
         self.step_size = step_size
@@ -19,9 +19,9 @@ class StepScan:
         while not self.motion_stage.done_moving:  # Wait until the motion is done
             time.sleep(0.1)
 
-    def acquire_image(self):
+    def acquire_image(self, camera_acq_pv):
         # Start the acquisition asynchronously
-        epics.caput('FLIR5:cam5:Acquire', 1)
+        epics.caput(camera_acq_pv, 1)
 
         while epics.caget('FLIR5:cam5:AcquireBusy') == 1:
             print("Acquiring image...")
@@ -69,13 +69,15 @@ def main(args):
         config = json.load(json_file)
         detector_pv = config.get("detector_pv")
         motion_stage_pv = config.get("motion_stage_pv")
+        camera_acq_pv = config.get("camera_acq_pv")
 
     step_scan = StepScan(
         args.exposure_time,
         args.overall_distance,
         args.step_size,
         detector_pv,
-        motion_stage_pv
+        motion_stage_pv,
+        camera_acq_pv
     )
     step_scan.move_motor_to_position(0)  # Move to the home position (position 0)
     step_scan.start_step_scan()
