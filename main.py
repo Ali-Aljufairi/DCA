@@ -74,7 +74,7 @@ class StepScan:
                 print("Image acquisition is complete.")
 
         # Register the acquisition callback
-        callback_id = epics.camonitor(acq_status, callback=acquisition_callback, run=True)
+        callback_id = epics.camonitor(acq_status, callback=acquisition_callback)
 
         # Start the image acquisition using software trigger
         epics.caput(camera_acq_pv, 1)
