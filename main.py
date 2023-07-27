@@ -82,7 +82,7 @@ class StepScan:
                 timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                 data_file.write(f"{target_position}    {self.motion_stage.get('RBV')}    {timestamp}\n")
                 file_name = f"image_{timestamp}.png"
-                self.save_image(image_data, file_name) 
+                self.save_image(image_data, file_name , self.image_size_x, self.image_size_y) 
 
 def main(args):
     with open(args.config_file) as json_file:
