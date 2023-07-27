@@ -38,6 +38,8 @@ class StepScan:
 
         # Set the trigger source to 0 (software triggering)
         epics.caput(self.trigger_source, 0)
+        epics.caget(self.image_size_x)
+        epics.caget(self.image_size_y)
 
     def move_motor_to_position(self, position):
         self.motion_stage.move(position)
@@ -47,7 +49,8 @@ class StepScan:
     def save_image(self, image_data, file_name, image_size_x, image_size_y):
         if not os.path.exists("images"):
             os.makedirs("images")
-
+        image_size_x= int(image_size_x)
+        image_size_y= int(image_size_y)
         image_reshaped = np.reshape(image_data, (image_size_y, image_size_x))
         file_path = os.path.join("images", file_name.replace("npy", "png"))
         image_pil = Image.fromarray(image_reshaped)
@@ -73,7 +76,9 @@ class StepScan:
     def start_step_scan(self):
         num_steps = int(self.overall_distance / self.step_size)
         with open('data.xdi', 'w') as data_file:
+            data_file.write("SESAME synchrotron-light\n")
             data_file.write("# Data columns: Position Current Time\n")
+
             for step in range(num_steps):
                 target_position = step * self.step_size
                 self.move_motor_to_position(target_position)
