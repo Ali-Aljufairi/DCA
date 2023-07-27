@@ -54,12 +54,13 @@ class StepScan:
             for step in range(num_steps):
                 target_position = step * self.step_size
                 self.move_motor_to_position(target_position)
+                print(f"target pos:        {target_position}")
                 image_data = self.acquire_image()
                 timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-                data_file.write(f"{target_position} {self.motion_stage.get('RBV')} {timestamp}\n")
+                data_file.write(f"{target_position}    {self.motion_stage.get('RBV')}    {timestamp}\n")
                 # Save the acquired image with a file name based on the timestamp
-                file_name = f"image_{timestamp}.npy"
-                self.save_image(image_data, file_name)
+                # file_name = f"image_{timestamp}.npy"
+                # self.save_image(image_data, file_name)
 
 
 def main(args):
@@ -87,4 +88,3 @@ if __name__ == "__main__":
     parser.add_argument("--config_file", default="config.json", help="JSON file containing PV names. (Default: config.json)")
     args = parser.parse_args()
     main(args)
-
