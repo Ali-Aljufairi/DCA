@@ -68,6 +68,7 @@ class StepScan:
     def acquire_image(self, trigger_software, image_counter, image_data, image_size_x, image_size_, num_steps):
         # Wait for the image counter to change, indicating a new image has been acquired
         initial_counter = epics.caget(image_counter)
+        
         # Trigger the software trigger to initiate image acquisition
         epics.caput(trigger_software, 1)
 
@@ -75,7 +76,7 @@ class StepScan:
             time.sleep(0.1)
             current_counter = epics.caget(image_counter)
             if current_counter != initial_counter:
-                print(f"Image acquired, counter: {num_steps}")
+                print(f"Image acquired, position: {epics.caget(self.motion_stage.user_readback)}")
                 break
 
         # Retrieve the image data
