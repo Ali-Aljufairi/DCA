@@ -1,3 +1,4 @@
+import h5py
 import numpy as np
 import time
 import argparse
@@ -79,21 +80,27 @@ class StepScan:
 
 
     def start_step_scan(self):
-        num_steps = int(self.overall_distance / self.step_size)
-        with open('data.xdi', 'w') as data_file:
-            data_file.write("SESAME synchrotron-light\n")
-            data_file.write("Scan performed by: Ali Redha\n")
-            data_file.write("Experiment: Step Scan\n")
-            data_file.write("# Data columns: Position Current Time\n")
-            for step in range(num_steps):
-                target_position = step * self.step_size
-                self.move_motor_to_position(target_position)
-                print(f"target pos:        {target_position}")
-                image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data)
-                timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-                data_file.write(f"{target_position}    {self.motion_stage.get('RBV')}    {timestamp}\n")
-                file_name = f"image_{timestamp}.png"
-                self.save_image(image_data, file_name , self.image_size_x, self.image_size_y) 
+        with h5py.File('data.h5', 'w') as h5file:
+            # Create group to store the raw images
+            h5file.create_group('raw')
+            # Create group to store the metadata
+            h5file.create_group('meta')
+            # Create datasets to store x, y positions
+            h5file['meta'].create_dataset('x_positions', (num_steps,))
+            h5file['meta'].create_dataset('y_positions', (num_steps,))
+            # Counter to keep track of the scan step
+            step = 0
+            for target_position in steps_array:
+                ...
+                image_data = self.acquire_image(...)
+                ...
+                # Save the raw image to HDF5
+                raw_img_name = f'image_{step}.tiff'
+                h5file['raw'].create_dataset(raw_img_name, data=image_data)   
+                # Save the position data to HDF5
+                h5file['meta']['x_positions'][step] = target_position
+                h5file['meta']['y_positions'][step] = self.motion_stage.get('RBV')
+                step += 1 
 
 def main(args):
     with open(args.config_file) as json_file:
