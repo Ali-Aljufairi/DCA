@@ -76,7 +76,7 @@ class StepScan:
             time.sleep(0.1)
             current_counter = epics.caget(image_counter)
             if current_counter != initial_counter:
-                print(f"Image acquired, position: {epics.caget(self.motion_stage.user_readback)}")
+                print(f"Image acquired with counter {current_counter}")
                 break
 
         # Retrieve the image data
