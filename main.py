@@ -65,7 +65,7 @@ class StepScan:
         image_pil.save(file_path)
         print(f"Saved image to {file_path}")
 
-    def acquire_image(self, trigger_software, image_counter, image_data, image_size_x, image_size_y):
+    def acquire_image(self, trigger_software, image_counter, image_data, image_size_x, image_size_, num_steps):
         # Wait for the image counter to change, indicating a new image has been acquired
         initial_counter = epics.caget(image_counter)
         # Trigger the software trigger to initiate image acquisition
@@ -75,37 +75,37 @@ class StepScan:
             time.sleep(0.1)
             current_counter = epics.caget(image_counter)
             if current_counter != initial_counter:
-                print(f"Image acquired, counter: {current_counter-initial_counter}")
+                print(f"Image acquired, counter: {num_steps}")
                 break
 
         # Retrieve the image data
         image_data = epics.caget(image_data)
-        image_ = np.reshape(image_data, (self.image_size_y, self.image_size_x))
+        image_data = np.reshape(image_data, (self.image_size_y, self.image_size_x))
         return image_data
     def start_step_scan(self):
 
         f = h5py.File('step_scan.hdf5', 'w')
         
+        num_steps = int(self.overall_distance / self.step_size)
         # Create detector and data groups
         detector_group = f.create_group('exchange/detector')
         data_group = f.create_group('exchange/data')
 
         # Add detector metadata
         detector_group.attrs['exposure_time'] = self.exposure_time  
-        detector_group.attrs['num_images'] = self.num_images
         detector_group.attrs['image_size_x'] = self.image_size_x
         detector_group.attrs['image_size_y'] = self.image_size_y
+        detector_group.attrs['Num_of_image'] = num_steps
         detector_group.attrs['local_name'] = "SESAME Detector"
         detector_group.attrs['pixel_size'] = 20E-6 # example
         
-        num_steps = int(self.overall_distance / self.step_size)
 
         for step in range(num_steps):
 
             # Move stage and acquire image
             target_position = step * self.step_size
             self.move_motor_to_position(target_position)
-            image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data ,self.image_size_x, self.image_size_y)
+            image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data ,self.image_size_x, self.image_size_y,num_steps)
             
             # Create dataset
             img_dataset = data_group.create_dataset(f'image_{step}', data=image_data)
