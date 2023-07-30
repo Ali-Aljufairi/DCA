@@ -81,32 +81,37 @@ class StepScan:
 
     def start_step_scan(self):
 
-        f = h5py.File('data.hdf5', 'w')
-        image_group = f.create_group('images')
+        f = h5py.File('step_scan.hdf5', 'w')
+        
+        # Create detector and data groups
+        detector_group = f.create_group('exchange/detector')
+        data_group = f.create_group('exchange/data')
 
+        # Add detector metadata
+        detector_group.attrs['exposure_time'] = self.exposure_time  
+        detector_group.attrs['pixel_size'] = 20E-6 # example
+        
         num_steps = int(self.overall_distance / self.step_size)
 
         for step in range(num_steps):
 
+            # Move stage and acquire image
             target_position = step * self.step_size
             self.move_motor_to_position(target_position)
-
-            image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data)
+            image_data = self.acquire_image()
             
-            timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+            # Create dataset
+            img_dataset = data_group.create_dataset(f'image_{step}', data=image_data)
+            
+            # Add metadata 
+            img_dataset.attrs['distance'] = target_position
+            img_dataset.attrs['timestamp'] = time.strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Add scan metadata
+        data_group.attrs['num_images'] = num_steps
+        data_group.attrs['step_size'] = self.step_size
 
-            # Save image to HDF5
-            img_dataset = image_group.create_dataset(f'image_{step}', data=image_data)
-            img_dataset.attrs['timestamp'] = timestamp  
-            img_dataset.attrs['position'] = target_position
-
-        # Add other metadata
-        image_group.attrs['num_images'] = num_steps
-        image_group.attrs['exposure_time'] = self.exposure_time
-        image_group.attrs['overall_distance'] = self.overall_distance
-        image_group.attrs['step_size'] = self.step_size
-
-        f.close()
+        f.close() 
 
 def main(args):
     with open(args.config_file) as json_file:
