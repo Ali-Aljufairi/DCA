@@ -1,2 +1,2 @@
-import silx.test
-silx.test.run_tests()
+import silx.io
+data = silx.io.open("data.hdf5")
