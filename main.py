@@ -83,29 +83,29 @@ class StepScan:
         return image_data
 
 
-def start_step_scan(self):
-    with h5py.File('data.h5', 'w') as h5file:
-        # Create group to store the raw images
-        h5file.create_group('raw')
-        # Create group to store the metadata
-        h5file.create_group('meta')
-        # Create datasets to store x, y positions
-        h5file['meta'].create_dataset('x_positions', (self.num_steps,))   
-        h5file['meta'].create_dataset('y_positions', (self.num_steps,)) 
-        # Counter to keep track of the scan step
-        step = 0 
-        for target_position in self.steps_array:
-            self.move_motor_to_position(target_position)   
-            image_data = self.acquire_image(self.trigger_software,       
-                                            self.image_counter,       
-                                            self.image_data)  
-            # Save the raw image to HDF5
-            raw_img_name = f'image_{step}.tiff'                       
-            h5file['raw'].create_dataset(raw_img_name, data=image_data)             
-            # Save the position data to HDF5       
-            h5file['meta']['x_positions'][step] = target_position
-            h5file['meta']['y_positions'][step] = self.motion_stage.get('RBV')
-            step += 1
+    def start_step_scan(self):
+        with h5py.File('data.h5', 'w') as h5file:
+            # Create group to store the raw images
+            h5file.create_group('raw')
+            # Create group to store the metadata
+            h5file.create_group('meta')
+            # Create datasets to store x, y positions
+            h5file['meta'].create_dataset('x_positions', (self.num_steps,))   
+            h5file['meta'].create_dataset('y_positions', (self.num_steps,)) 
+            # Counter to keep track of the scan step
+            step = 0 
+            for target_position in self.steps_array:
+                self.move_motor_to_position(target_position)   
+                image_data = self.acquire_image(self.trigger_software,       
+                                                self.image_counter,       
+                                                self.image_data)  
+                # Save the raw image to HDF5
+                raw_img_name = f'image_{step}.tiff'                       
+                h5file['raw'].create_dataset(raw_img_name, data=image_data)             
+                # Save the position data to HDF5       
+                h5file['meta']['x_positions'][step] = target_position
+                h5file['meta']['y_positions'][step] = self.motion_stage.get('RBV')
+                step += 1
 
 def main(args):
     with open(args.config_file) as json_file:
