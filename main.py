@@ -38,6 +38,7 @@ class StepScan:
 
         # Set the trigger source to 0 (software triggering)
         epics.caput(self.trigger_source, 0)
+        epics.caput(self.num_images, step_size* overall_distance) 
 
     def move_motor_to_position(self, position):
         self.motion_stage.move(position)
@@ -54,11 +55,11 @@ class StepScan:
         print(f"Saved image to {file_path}")
 
     def acquire_image(self, trigger_software, image_counter, image_data):
+        # Wait for the image counter to change, indicating a new image has been acquired
+        initial_counter = epics.caget(image_counter)
         # Trigger the software trigger to initiate image acquisition
         epics.caput(trigger_software, 1)
 
-        # Wait for the image counter to change, indicating a new image has been acquired
-        initial_counter = epics.caget(image_counter)
         while True:
             time.sleep(0.1)
             current_counter = epics.caget(image_counter)
@@ -77,7 +78,6 @@ class StepScan:
             data_file.write("Scan performed by: Ali Redha\n")
             data_file.write("Experiment: Step Scan\n")
             data_file.write("# Data columns: Position Current Time\n")
-
             for step in range(num_steps):
                 target_position = step * self.step_size
                 self.move_motor_to_position(target_position)
