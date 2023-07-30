@@ -38,7 +38,11 @@ class StepScan:
 
         # Set the trigger source to 0 (software triggering)
         epics.caput(self.trigger_source, 0)
-        epics.caput(self.num_images, step_size* overall_distance) 
+
+        steps_array = np.arange(0, overall_distance + step_size, step_size)
+        num_step= np.argmax(steps_array > overall_distance)
+        print(f"num steps: {num_step}")
+        epics.caput(self.num_images, num_step)
         print(f"num images: {epics.caget(self.num_images)}")
 
     def move_motor_to_position(self, position):
