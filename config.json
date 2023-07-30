@@ -12,5 +12,6 @@
   "trigger_mode" : "FLIR5:cam5:TriggerMode",
   "trigger_source" : "FLIR5:cam5:TriggerSource",
   "trigger_software" : "FLIR5:cam5:TriggerSoftware",
+  "exposure_time_pv" : "FLIR5:cam5:AcquireTime",
   "image_data" : "FLIR5:image1:ArrayData"
 }

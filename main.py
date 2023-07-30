@@ -11,7 +11,7 @@ import threading
 class StepScan:
     def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv, camera_acq_pv,
                 image_size_x, image_size_y, image_counter, num_images, acq_mode, start_acq, acq_status,
-                trigger_mode, trigger_source, trigger_software, image_data):
+                trigger_mode, trigger_source, trigger_software, image_data ,exposure_time_pv):
         self.exposure_time = exposure_time
         self.overall_distance = overall_distance
         self.step_size = step_size
@@ -29,7 +29,10 @@ class StepScan:
         self.trigger_source = trigger_source
         self.trigger_software = trigger_software
         self.image_data = image_data
+        self.exposure_time_pv = exposure_time_pv
 
+        # Set the exposure time
+        epics.caput(self.exposure_time_pv, self.exposure_time)
         # Set the acquisition mode to multiple
         epics.caput(self.acq_mode, 1)
 
@@ -62,7 +65,7 @@ class StepScan:
         image_pil.save(file_path)
         print(f"Saved image to {file_path}")
 
-    def acquire_image(self, trigger_software, image_counter, image_data):
+    def acquire_image(self, trigger_software, image_counter, image_data, image_size_x, image_size_y):
         # Wait for the image counter to change, indicating a new image has been acquired
         initial_counter = epics.caget(image_counter)
         # Trigger the software trigger to initiate image acquisition
@@ -72,10 +75,12 @@ class StepScan:
             time.sleep(0.1)
             current_counter = epics.caget(image_counter)
             if current_counter != initial_counter:
+                print(f"Image acquired, counter: {current_counter-initial_counter}")
                 break
 
         # Retrieve the image data
         image_data = epics.caget(image_data)
+        image_ = np.reshape(image_data, (self.image_size_y, self.image_size_x))
         return image_data
     def start_step_scan(self):
 
@@ -87,6 +92,10 @@ class StepScan:
 
         # Add detector metadata
         detector_group.attrs['exposure_time'] = self.exposure_time  
+        detector_group.attrs['num_images'] = self.num_images
+        detector_group.attrs['image_size_x'] = self.image_size_x
+        detector_group.attrs['image_size_y'] = self.image_size_y
+        detector_group.attrs['local_name'] = "SESAME Detector"
         detector_group.attrs['pixel_size'] = 20E-6 # example
         
         num_steps = int(self.overall_distance / self.step_size)
@@ -96,7 +105,7 @@ class StepScan:
             # Move stage and acquire image
             target_position = step * self.step_size
             self.move_motor_to_position(target_position)
-            image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data)
+            image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data ,self.image_size_x, self.image_size_y)
             
             # Create dataset
             img_dataset = data_group.create_dataset(f'image_{step}', data=image_data)
@@ -129,6 +138,7 @@ def main(args):
         trigger_source = config.get("trigger_source")
         trigger_software = config.get("trigger_software")
         image_data = config.get("image_data")
+        exposure_time_pv = config.get("exposure_time_pv")
 
     step_scan = StepScan(
         args.exposure_time,
@@ -147,7 +157,9 @@ def main(args):
         trigger_mode,
         trigger_source,
         trigger_software,
-        image_data
+        image_data,
+        exposure_time_pv
+
     )
     step_scan.move_motor_to_position(0)  # Move to the home position (position 0)
     step_scan.start_step_scan()
