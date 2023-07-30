@@ -30,7 +30,7 @@ class StepScan:
         self.trigger_software = trigger_software
         self.image_data = image_data
         self.step_size = step_size  
-        steps_array = np.arange(0, overall_distance + step_size, step_size)    
+        self.steps_array = np.arange(0, overall_distance + step_size, step_size)    
         num_step = len(steps_array) - 1
         self.num_steps = num_step
 
