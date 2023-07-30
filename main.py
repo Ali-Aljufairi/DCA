@@ -77,8 +77,6 @@ class StepScan:
         # Retrieve the image data
         image_data = epics.caget(image_data)
         return image_data
-
-
     def start_step_scan(self):
 
         f = h5py.File('step_scan.hdf5', 'w')
@@ -98,7 +96,7 @@ class StepScan:
             # Move stage and acquire image
             target_position = step * self.step_size
             self.move_motor_to_position(target_position)
-            image_data = self.acquire_image()
+            image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data)
             
             # Create dataset
             img_dataset = data_group.create_dataset(f'image_{step}', data=image_data)
@@ -111,7 +109,8 @@ class StepScan:
         data_group.attrs['num_images'] = num_steps
         data_group.attrs['step_size'] = self.step_size
 
-        f.close() 
+        f.close()
+
 
 def main(args):
     with open(args.config_file) as json_file:
