@@ -31,8 +31,7 @@ class StepScan:
         self.image_data = image_data
         self.step_size = step_size  
         self.steps_array = np.arange(0, overall_distance + step_size, step_size)    
-        num_step = len(steps_array) - 1
-        self.num_steps = num_step
+        self.num_steps = len(steps_array) - 1
 
         # Set the acquisition mode to multiple
         epics.caput(self.acq_mode, 1)
