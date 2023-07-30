@@ -40,7 +40,7 @@ class StepScan:
         epics.caput(self.trigger_source, 0)
 
         steps_array = np.arange(0, overall_distance + step_size, step_size)
-        num_step= np.argmax(steps_array > overall_distance)
+        num_step= len(steps_array) - 1
         print(f"num steps: {num_step}")
         epics.caput(self.num_images, num_step)
         print(f"num images: {epics.caget(self.num_images)}")
