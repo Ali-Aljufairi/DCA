@@ -31,7 +31,7 @@ class StepScan:
         self.image_data = image_data
         self.step_size = step_size  
         self.steps_array = np.arange(0, overall_distance + step_size, step_size)    
-        self.num_steps = len(steps_array) - 1
+        self.num_steps = len(self.steps_array) - 1
 
         # Set the acquisition mode to multiple
         epics.caput(self.acq_mode, 1)
@@ -43,13 +43,7 @@ class StepScan:
         # Set the trigger source to 0 (software triggering)
         epics.caput(self.trigger_source, 0)
 
-        steps_array = np.arange(0, overall_distance + step_size, step_size)
-        print(f"{overall_distance} {step_size} type of overall distance: {type(overall_distance)} type of step size: {type(step_size)}")
-        print(f"steps array: {steps_array}")
-        num_step= len(steps_array) - 1
-        print(f"num steps: {num_step}")
-        epics.caput(self.num_images, num_step)
-        print(f"num images: {epics.caget(self.num_images)}")
+        epics.caput(self.num_images, self.num_step)
 
     def move_motor_to_position(self, position):
         self.motion_stage.move(position)
@@ -142,6 +136,7 @@ def main(args):
         trigger_source,
         trigger_software,
         image_data
+
     )
     step_scan.move_motor_to_position(0)  # Move to the home position (position 0)
     step_scan.start_step_scan()
