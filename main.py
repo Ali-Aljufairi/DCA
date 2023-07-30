@@ -77,7 +77,7 @@ class StepScan:
 
 
     def start_step_scan(self):
-        with h5py.File('data.h5', 'w') as h5file:
+        with h5py.File('data.hdf5', 'w') as h5file:
             # Create group to store the raw images
             h5file.create_group('raw')
             # Create group to store the metadata
