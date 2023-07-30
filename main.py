@@ -29,9 +29,6 @@ class StepScan:
         self.trigger_source = trigger_source
         self.trigger_software = trigger_software
         self.image_data = image_data
-        self.step_size = step_size  
-        self.steps_array = np.arange(0, overall_distance + step_size, step_size)    
-        self.num_steps = len(self.steps_array) - 1
 
         # Set the acquisition mode to multiple
         epics.caput(self.acq_mode, 1)
@@ -43,7 +40,13 @@ class StepScan:
         # Set the trigger source to 0 (software triggering)
         epics.caput(self.trigger_source, 0)
 
-        epics.caput(self.num_images, self.num_steps)
+        steps_array = np.arange(0, overall_distance + step_size, step_size)
+        print(f"{overall_distance} {step_size} type of overall distance: {type(overall_distance)} type of step size: {type(step_size)}")
+        print(f"steps array: {steps_array}")
+        num_step= len(steps_array) - 1
+        print(f"num steps: {num_step}")
+        epics.caput(self.num_images, num_step)
+        print(f"num images: {epics.caget(self.num_images)}")
 
     def move_motor_to_position(self, position):
         self.motion_stage.move(position)
@@ -77,28 +80,33 @@ class StepScan:
 
 
     def start_step_scan(self):
-        with h5py.File('data.hdf5', 'w') as h5file:
-            # Create group to store the raw images
-            h5file.create_group('raw')
-            # Create group to store the metadata
-            h5file.create_group('meta')
-            # Create datasets to store x, y positions
-            h5file['meta'].create_dataset('x_positions', (self.num_steps,))   
-            h5file['meta'].create_dataset('y_positions', (self.num_steps,)) 
-            # Counter to keep track of the scan step
-            step = 0 
-            for target_position in self.steps_array:
-                self.move_motor_to_position(target_position)   
-                image_data = self.acquire_image(self.trigger_software,       
-                                                self.image_counter,       
-                                                self.image_data)  
-                # Save the raw image to HDF5
-                raw_img_name = f'image_{step}.tiff'                       
-                h5file['raw'].create_dataset(raw_img_name, data=image_data)             
-                # Save the position data to HDF5       
-                h5file['meta']['x_positions'][step] = target_position
-                h5file['meta']['y_positions'][step] = self.motion_stage.get('RBV')
-                step += 1
+
+        f = h5py.File('data.hdf5', 'w')
+        image_group = f.create_group('images')
+
+        num_steps = int(self.overall_distance / self.step_size)
+
+        for step in range(num_steps):
+
+            target_position = step * self.step_size
+            self.move_motor_to_position(target_position)
+
+            image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data)
+            
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+
+            # Save image to HDF5
+            img_dataset = image_group.create_dataset(f'image_{step}', data=image_data)
+            img_dataset.attrs['timestamp'] = timestamp  
+            img_dataset.attrs['position'] = target_position
+
+        # Add other metadata
+        image_group.attrs['num_images'] = num_steps
+        image_group.attrs['exposure_time'] = self.exposure_time
+        image_group.attrs['overall_distance'] = self.overall_distance
+        image_group.attrs['step_size'] = self.step_size
+
+        f.close()
 
 def main(args):
     with open(args.config_file) as json_file:
@@ -136,7 +144,6 @@ def main(args):
         trigger_source,
         trigger_software,
         image_data
-
     )
     step_scan.move_motor_to_position(0)  # Move to the home position (position 0)
     step_scan.start_step_scan()
