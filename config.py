@@ -40,4 +40,6 @@ enable_ndarray_callbacks = config.enable_ndarray_callbacks
 enable_ZMQ_Array = config.enable_ZMQ_Array
 enable_ZMQ_Callbacks = config.enable_ZMQ_callbacks
 velocity = config.velocity
+zmq_port = config.zmq_port
+zmq_host = config.zmq_host
 
