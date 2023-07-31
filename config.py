@@ -1,6 +1,4 @@
 import json
-from typing import Any
-from main import path
 
 class Config:
     def __init__(self, file_path):
@@ -20,7 +18,7 @@ class Config:
             # If the attribute is not found in the config data, raise an AttributeError
             raise AttributeError(f"'Config' object has no attribute '{name}'")
 
-config = Config(path)
+config = Config("config.json")
 detector_pv = config.detector_pv
 motion_stage_pv = config.motion_stage_pv
 camera_acq_pv = config.camera_acq_pv
