@@ -55,5 +55,5 @@ frame_rate_pv = config.frame_rate_pv
 enable_ndarray = config.enable_ndarray
 enable_ndarray_callbacks = config.enable_ndarray_callbacks
 enable_ZMQ_Array = config.enable_ZMQ_Array
-enable_ZMQ_Callbacks = config.enable_ZMQ_Callbacks
+enable_ZMQ_Callbacks = config.enable_ZMQ_callbacks
 velocity = config.velocity
