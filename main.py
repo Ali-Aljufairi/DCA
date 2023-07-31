@@ -111,6 +111,7 @@ from config import Config
 
 def main(args):
     Config(args.config_file)
+    print(f"{velocity}")
 
 
 
