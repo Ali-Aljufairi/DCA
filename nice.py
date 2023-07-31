@@ -29,5 +29,5 @@ for i, line in enumerate(lines):
 
         data = data.reshape(x, y)
 
-        img = Image.fromarray(data.astype(np.uint8))  # Convert data to uint8 type for image creation
+        img = Image.fromarray(data.astype(np.uint16))  # Convert data to uint8 type for image creation
         img.save(f'images/image{i}.png')
