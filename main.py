@@ -110,7 +110,7 @@ from config import *
 
 
 def main(args):
-    path=args.config_file
+    Config(args.config_file)
     print(f"{velocity}")
 
 
