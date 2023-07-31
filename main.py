@@ -10,7 +10,7 @@ from PIL import Image
 import threading
 import multiprocessing
 from stepscan import StepScan
-from config import Config
+from config import *
 
 
 # class ContinuousScan:
@@ -110,7 +110,7 @@ from config import Config
 
 
 def main(args):
-    Config(args.config_file)
+    path=args.config_file
     print(f"{velocity}")
 
 
