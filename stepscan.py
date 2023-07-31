@@ -61,7 +61,7 @@ class StepScan:
         image_pil.save(file_path)
         print(f"Saved image to {file_path}")
 
-    def acquire_image(self, trigger_software, image_counter, image_data, image_size_x, image_size_, num_steps):
+    def acquire_image(self, trigger_software, image_counter, image_data, image_size_x, image_size_y, num_steps):
         # Wait for the image counter to change, indicating a new image has been acquired
         initial_counter = epics.caget(image_counter)
         
@@ -77,7 +77,7 @@ class StepScan:
 
         # Retrieve the image data
         image_data = epics.caget(image_data)
-        image_data = np.reshape(image_data, (self.image_size_y, self.image_size_x))
+        image_data = np.reshape(image_data, (image_size_x, image_size_y))
         return image_data
     def start_step_scan(self):
 
