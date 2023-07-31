@@ -1,54 +1,128 @@
 import numpy as np
+import h5py
 import argparse
 import json
+import time
+import epics
 import os
+import zmq
 from PIL import Image
 import threading
+import multiprocessing
 from stepscan import StepScan
+from config import *
+
+
+# class ContinuousScan:
+
+#     def __init__(self, exposure_time, distance, step_size, fps, num_images, image_shape,motion_stage_pv, detector_pv, zmq_ip, zmq_port):
+        
+#         self.exposure_time = exposure_time
+#         self.distance = distance
+#         self.step_size = step_size
+#         self.fps = fps
+#         self.num_images = num_images
+#         self.image_shape = image_shape
+        
+#         # EPICS initialization
+#         self.motor = epics.Motor(motion_stage_pv)
+#         self.detector = epics.PV(detector_pv)
+        
+#         # Set exposure time
+#         self.detector.put(exposure_time)
+        
+#         # Initialize ZMQ
+#         context = zmq.Context()
+#         self.socket = context.socket(zmq.SUB)
+#         self.socket.connect(f"tcp://{zmq_ip}:{zmq_port}")
+#         self.socket.setsockopt_string(zmq.SUBSCRIBE, "")
+        
+#         # Initialize HDF5
+#         self.f = h5py.File('continuous_scan.hdf5', 'w')
+#         self.detector_group = self.f.create_group('exchange/detector')
+#         self.data_group = self.f.create_group('exchange/data')
+
+#         # Add metadata
+#         self.detector_group.attrs['exposure_time'] = exposure_time
+#         self.detector_group.attrs['num_images'] = num_images
+        
+#         # Start image collection process
+#         self.process = multiprocessing.Process(target=self.save_images)
+#         self.process.start()
+        
+#     def start_scan(self):
+        
+#         # Calculate velocity
+#         velocity = self.step_size * self.fps
+        
+#         # Move to start
+#         self.motor.move(0)
+        
+#         # Start detector acquisition
+#         self.detector.acquire(1)
+        
+#         # Start motion
+#         self.motor.velocity(velocity)  
+#         while self.motor.position < self.distance:
+#             time.sleep(self.step_size / velocity)
+            
+#         # Stop acquisition  
+#         self.detector.acquire(0)
+          
+#     def save_images(self):
+        
+#         for i in range(self.num_images):
+            
+#             # Receive image
+#             image = self.socket.recv()
+#             image = np.reshape(image, self.image_shape)
+            
+#             # Save to HDF5
+#             self.data_group.create_dataset(f'image_{i}', data=image)
+            
+#     def stop(self):
+        
+#         # Stop motion
+#         self.motor.stop()
+        
+#         # Close HDF5, ZMQ
+#         self.f.close()
+#         self.socket.close()
+#         self.process.terminate()
+        
+# # Start scan
+# scan.start_scan()  
+
+# # Stop scan
+# scan.stop()
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def main(args):
-    with open(args.config_file) as json_file:
-        config = json.load(json_file)
-        detector_pv = config.get("detector_pv")
-        motion_stage_pv = config.get("motion_stage_pv")
-        camera_acq_pv = config.get("camera_acq_pv")
-        image_size_x = config.get("image_size_x")
-        image_size_y = config.get("image_size_y")
-        image_counter = config.get("image_counter")
-        num_images = config.get("num_images")
-        acq_mode = config.get("acq_mode")
-        start_acq = config.get("start_acq")
-        acq_status = config.get("acq_status")
-        trigger_mode = config.get("trigger_mode")
-        trigger_source = config.get("trigger_source")
-        trigger_software = config.get("trigger_software")
-        image_data = config.get("image_data")
-        exposure_time_pv = config.get("exposure_time_pv")
+    config = Config(args.config_file)
+    print(f"{velocity}")
 
-    step_scan = StepScan(
-        args.exposure_time,
-        args.overall_distance,
-        args.step_size,
-        detector_pv,
-        motion_stage_pv,
-        camera_acq_pv,
-        image_size_x,
-        image_size_y,
-        image_counter,
-        num_images,
-        acq_mode,
-        start_acq,
-        acq_status,
-        trigger_mode,
-        trigger_source,
-        trigger_software,
-        image_data,
-        exposure_time_pv
 
-    )
-    step_scan.move_motor_to_position(0)  # Move to the home position (position 0)
-    step_scan.start_step_scan()
+
+
+    
+
+
+
+
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Step Scan using FLIR camera and MICOS stage.")

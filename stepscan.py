@@ -116,3 +116,28 @@ class StepScan:
         data_group.attrs['step_size'] = self.step_size
 
         f.close()
+
+
+    # step_scan = StepScan(
+    #     args.exposure_time,
+    #     args.overall_distance,
+    #     args.step_size,
+    #     detector_pv,
+    #     motion_stage_pv,
+    #     camera_acq_pv,
+    #     image_size_x,
+    #     image_size_y,
+    #     image_counter,
+    #     num_images,
+    #     acq_mode,
+    #     start_acq,
+    #     acq_status,
+    #     trigger_mode,
+    #     trigger_source,
+    #     trigger_software,
+    #     image_data,
+    #     exposure_time_pv
+
+    # )
+    # step_scan.move_motor_to_position(-1)  # Move to the home position (position 0)
+    # step_scan.start_step_scan()
