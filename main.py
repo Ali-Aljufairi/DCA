@@ -121,47 +121,49 @@ class ContinuousScan:
         self.move_motor_to_position(0)
         initial_time = time.time()
 
+        step_number = 0
+
         # Perform acceleration phase
         for i in range(int(acceleration_time / time_per_frame)):
-            t = time.time() - initial_time
-            target_position = 0.5 * acceleration * t ** 2
-            self.move_motor_to_position(target_position)
-            image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data, self.image_size_x,
-                                            self.image_size_y, 1)
-            img_dataset = data_group.create_dataset('image_0', data=image_data)
-            img_dataset.attrs['distance'] = target_position
+            # ... (your existing code)
+
+            img_dataset = data_group.create_dataset(f'image_{step_number}', data=image_data)
             img_dataset.attrs['timestamp'] = time.strftime("%Y-%m-%d %H:%M:%S")
+
+            # Increment the step number
+            step_number += 1
+
             time.sleep(time_per_frame)
 
         # Perform steady speed phase
         for i in range(int(steady_speed_time / time_per_frame)):
-            t = time.time() - initial_time
-            target_position = steady_speed_distance + steady_speed * t
-            self.move_motor_to_position(target_position)
-            image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data, self.image_size_x,
-                                            self.image_size_y, 1)
-            img_dataset = data_group.create_dataset('image_0', data=image_data)
-            img_dataset.attrs['distance'] = target_position
+            # ... (your existing code)
+
+            img_dataset = data_group.create_dataset(f'image_{step_number}', data=image_data)
             img_dataset.attrs['timestamp'] = time.strftime("%Y-%m-%d %H:%M:%S")
+
+            # Increment the step number
+            step_number += 1
+
             time.sleep(time_per_frame)
 
         # Perform deceleration phase
         for i in range(int(deceleration_time / time_per_frame)):
-            t = time.time() - initial_time
-            target_position = steady_speed_distance + steady_speed * acceleration_deceleration_time + 0.5 * deceleration * t ** 2
-            self.move_motor_to_position(target_position)
-            image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data, self.image_size_x,
-                                            self.image_size_y, 1)
-            img_dataset = data_group.create_dataset('image_0', data=image_data)
-            img_dataset.attrs['distance'] = target_position
+            # ... (your existing code)
+
+            img_dataset = data_group.create_dataset(f'image_{step_number}', data=image_data)
             img_dataset.attrs['timestamp'] = time.strftime("%Y-%m-%d %H:%M:%S")
+
+            # Increment the step number
+            step_number += 1
+
             time.sleep(time_per_frame)
 
-        # Final move back to the initial position
-        self.move_motor_to_position(0)
+            # Final move back to the initial position
+            self.move_motor_to_position(0)
 
-        # Close the HDF5 file
-        f.close()
+            # Close the HDF5 file
+            f.close()
 
 
 
