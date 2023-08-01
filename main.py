@@ -15,14 +15,15 @@ from config import *
 
 class ContinuousScan:
 
-    def __init__(self, exposure_time, distance, step_size, fps, num_images, image_shape, motion_stage_pv, detector_pv, zmq_ip, zmq_port):
+    def __init__(self, exposure_time, distance, step_size, fps, num_images, motion_stage_pv, detector_pv, zmq_ip, zmq_port, exposure_time_pv):
 
         self.exposure_time = exposure_time
+        self.exposure_time_pv = epics.caput(exposure_time_pv, exposure_time)
         self.distance = distance
         self.step_size = step_size
         self.fps = fps
         self.num_images = num_images
-        self.image_shape = image_shape
+        
 
         # EPICS initialization
         self.motor = epics.Motor(motion_stage_pv)
@@ -91,15 +92,12 @@ class ContinuousScan:
         self.process.terminate()
 
 
-
-
 def main(args):
     Config(args.config_file)
-    continues_scan = ContinuousScan(args.exposure_time, args.overall_distance, args.step_size, args.fps,
-                                   args.num_images, args.image_shape, args.motion_stage_pv, args.detector_pv, args.zmq_ip, args.zmq_port)
+    continues_scan = ContinuousScan(args.exposure_time, args.overall_distance, args.step_size,
+                                    frame_rate_pv, num_images, motion_stage_pv, detector_pv, zmq_host, zmq_port, exposure_time_pv)
     continues_scan.start_scan()
     continues_scan.stop()
-
 
 
 if __name__ == "__main__":
