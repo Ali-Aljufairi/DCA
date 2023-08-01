@@ -15,7 +15,8 @@ from config import *
 class ContinuousScan:
     def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv, camera_acq_pv,
                  image_size_x, image_size_y, image_counter, num_images, acq_mode, start_acq, acq_status,
-                 trigger_mode, trigger_source, trigger_software, image_data, exposure_time_pv, frame_rate):
+                 trigger_mode, trigger_source, trigger_software, image_data, exposure_time_pv, frame_rate,
+                 acceleration_time_pv):
         self.exposure_time = exposure_time
         self.overall_distance = overall_distance
         self.step_size = step_size
@@ -47,6 +48,9 @@ class ContinuousScan:
 
         # Set the trigger source to 0 (software triggering)
         epics.caput(self.trigger_source, 0)
+
+        # Get the acceleration time from an external source (e.g., EPICS PV)
+        self.acceleration_time = int(epics.caget(acceleration_time_pv))
 
     def move_motor_to_position(self, position):
         self.motion_stage.move(position)
@@ -85,26 +89,9 @@ class ContinuousScan:
         # Calculate time per frame based on the frame rate
         time_per_frame = 1.0 / self.frame_rate
 
-        # Calculate speed and distance for acceleration, steady speed, and deceleration phases
-        acceleration_time = time_per_frame * 5  # 5 frames for acceleration
-        steady_speed_distance = 5 * self.step_size
-        steady_speed_time = steady_speed_distance / self.step_size / self.frame_rate
+        # Calculate the time needed for the entire scan (including acceleration phase)
         total_distance = self.overall_distance * self.step_size
-        deceleration_time = acceleration_time
-
-        # Calculate speed during steady speed phase
-        steady_speed = steady_speed_distance / steady_speed_time
-
-        # Calculate acceleration and deceleration
-        acceleration = steady_speed / acceleration_time
-        deceleration = -acceleration
-
-        # Calculate the time needed for the entire scan (excluding the deceleration phase)
-        acceleration_deceleration_distance = total_distance - steady_speed_distance
-        acceleration_deceleration_time = acceleration_deceleration_distance / steady_speed
-
-        # Calculate total scan time (including acceleration and deceleration)
-        total_time = 2 * acceleration_time + acceleration_deceleration_time
+        total_time = 2 * self.acceleration_time + (total_distance - 2 * self.acceleration_time) / self.frame_rate
 
         # Start the scan
         f = h5py.File('continuous_scan.hdf5', 'w')
@@ -116,52 +103,34 @@ class ContinuousScan:
         detector_group.attrs['Num_of_image'] = 1  # Continuous scan produces a single dataset
         detector_group.attrs['local_name'] = "SESAME Detector"
         detector_group.attrs['pixel_size'] = 20E-6  # example
- 
 
         # Initial position (0)
         self.move_motor_to_position(0)
         initial_time = time.time()
 
-        # Perform acceleration phase
-        for i in range(int(acceleration_time / time_per_frame)):
-            t = time.time() - initial_time
-            target_position = 0.5 * acceleration * t ** 2
-            self.move_motor_to_position(target_position)
-            image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data, self.image_size_x,
-                                            self.image_size_y, 1)
-            img_dataset = data_group.create_dataset(f'image_{i}', data=image_data)  # Updated dataset name
-            img_dataset.attrs['distance'] = target_position
+        # Perform the continuous scan
+        step_distance = self.step_size
+        while step_distance <= total_distance:
+            # Move the motor to the target position
+            self.move_motor_to_position(step_distance)
+
+            # Acquire an image
+            image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data,
+                                            self.image_size_x, self.image_size_y, 1)
+
+            # Save the acquired image to the HDF5 file
+            img_dataset = data_group.create_dataset(f'image_{step_distance}', data=image_data)
+            img_dataset.attrs['distance'] = step_distance
             img_dataset.attrs['timestamp'] = time.strftime("%Y-%m-%d %H:%M:%S")
-            time.sleep(time_per_frame)
-                                            
-               # Perform steady speed phase
-        for i in range(int(steady_speed_time / time_per_frame)):
-            t = time.time() - initial_time
-            target_position = steady_speed_distance + steady_speed * t
-            self.move_motor_to_position(target_position)
-            image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data, self.image_size_x,
-                                            self.image_size_y, 1)
-            img_dataset = data_group.create_dataset(f'image_{i}_{i}', data=image_data)  # Updated dataset name
-            img_dataset.attrs['distance'] = target_position
-            img_dataset.attrs['timestamp'] = time.strftime("%Y-%m-%d %H:%M:%S")
-            time.sleep(time_per_frame)
 
-           
+            # Increment the step distance
+            step_distance += self.step_size
 
-
-        # Perform deceleration phase
-        for i in range(int(deceleration_time / time_per_frame)):
-            t = time.time() - initial_time
-            target_position = steady_speed_distance + steady_speed * acceleration_deceleration_time + 0.5 * deceleration * t ** 2
-            self.move_motor_to_position(target_position)
-            image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data, self.image_size_x,
-                                            self.image_size_y, 1)
-            img_dataset = data_group.create_dataset(f'image_{i}_{i}_{i}', data=image_data)  # Updated dataset name
-            img_dataset.attrs['distance'] = target_position
-            img_dataset.attrs['timestamp'] = time.strftime("%Y-%m-%d %H:%M:%S")
-            time.sleep(time_per_frame)
-
-
+            # Wait to maintain the frame rate
+            elapsed_time = time.time() - initial_time
+            if elapsed_time < total_time:
+                remaining_time = total_time - elapsed_time
+                time.sleep(remaining_time)
 
         # Final move back to the initial position
         self.move_motor_to_position(0)
@@ -192,7 +161,10 @@ def main(args):
         trigger_software,
         image_data,
         exposure_time_pv,
-        frame_rate_pv
+        frame_rate_pv,
+        accelaration_time_pv
+        
+
     )
 
     continuous_scan.continuous_scan()
