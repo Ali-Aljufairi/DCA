@@ -100,7 +100,7 @@ class ContinuousScan:
 def main(args):
     Config(args.config_file)
     continues_scan = ContinuousScan(args.exposure_time, args.overall_distance, args.step_size,
-                                    frame_rate_pv, num_images, motion_stage_pv, detector_pv, zmq_host, zmq_port, exposure_time_pv, enable_ZMQ_Array, enable_ZMQ_Callbacks, enable_ndarray, enable_ndarray_callbacks,accelaratio_time, trigger_mode, velocity, trigger_software, trigger_source, acq_mode, image_size_x, image_size_y)
+                                    frame_rate_pv, num_images, motion_stage_pv, detector_pv, zmq_host, zmq_port, exposure_time_pv, enable_ZMQ_Array, enable_ZMQ_Callbacks, enable_ndarray, enable_ndarray_callbacks,accelaration_time, trigger_mode, velocity, trigger_software, trigger_source, acq_mode, image_size_x, image_size_y)
     continues_scan.start_scan()
     continues_scan.stop()
 
