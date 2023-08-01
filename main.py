@@ -116,6 +116,7 @@ class ContinuousScan:
         detector_group.attrs['Num_of_image'] = 1  # Continuous scan produces a single dataset
         detector_group.attrs['local_name'] = "SESAME Detector"
         detector_group.attrs['pixel_size'] = 20E-6  # example
+ 
 
         # Initial position (0)
         self.move_motor_to_position(0)
@@ -128,7 +129,7 @@ class ContinuousScan:
             self.move_motor_to_position(target_position)
             image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data, self.image_size_x,
                                             self.image_size_y, 1)
-            img_dataset = data_group.create_dataset('image_0', data=image_data)
+            img_dataset = data_group.create_dataset(f'image_{i}', data=image_data)  # Updated dataset name
             img_dataset.attrs['distance'] = target_position
             img_dataset.attrs['timestamp'] = time.strftime("%Y-%m-%d %H:%M:%S")
             time.sleep(time_per_frame)
@@ -140,10 +141,11 @@ class ContinuousScan:
             self.move_motor_to_position(target_position)
             image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data, self.image_size_x,
                                             self.image_size_y, 1)
-            img_dataset = data_group.create_dataset('image_0', data=image_data)
+            img_dataset = data_group.create_dataset(f'image_{i}', data=image_data)  # Updated dataset name
             img_dataset.attrs['distance'] = target_position
             img_dataset.attrs['timestamp'] = time.strftime("%Y-%m-%d %H:%M:%S")
             time.sleep(time_per_frame)
+
 
         # Perform deceleration phase
         for i in range(int(deceleration_time / time_per_frame)):
@@ -152,10 +154,12 @@ class ContinuousScan:
             self.move_motor_to_position(target_position)
             image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data, self.image_size_x,
                                             self.image_size_y, 1)
-            img_dataset = data_group.create_dataset('image_0', data=image_data)
+            img_dataset = data_group.create_dataset(f'image_{i}', data=image_data)  # Updated dataset name
             img_dataset.attrs['distance'] = target_position
             img_dataset.attrs['timestamp'] = time.strftime("%Y-%m-%d %H:%M:%S")
             time.sleep(time_per_frame)
+
+
 
         # Final move back to the initial position
         self.move_motor_to_position(0)
