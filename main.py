@@ -15,7 +15,7 @@ from config import *
 
 class ContinuousScan:
 
-    def __init__(self, exposure_time, distance, step_size, fps, num_images, motion_stage_pv, detector_pv, zmq_ip, zmq_port, exposure_time_pv):
+    def __init__(self, exposure_time, distance, step_size, fps, num_images, motion_stage_pv, detector_pv, zmq_ip, zmq_port, exposure_time_pv,ennable_ZMQ_Array, enable_ZMQ_Callbacks, enable_ndarray, enable_ndarray_callbacks,accelaratio_time, trigger_mode, velocity):
 
         self.exposure_time = exposure_time
         self.exposure_time_pv = epics.caput(exposure_time_pv, exposure_time)
@@ -32,12 +32,19 @@ class ContinuousScan:
         # Set exposure time
         self.detector.put(exposure_time)
 
+        # Epics PVs initialization
+        epics.caput(enable_ndarray, 1)
+        epics.caput(enable_ndarray_callbacks, 1)
+        epics.caput(ennable_ZMQ_Array, 1)
+        epics.caput(enable_ZMQ_Callbacks, 1)
+        epics.caput(trigger_mode, 2)
+
         # Initialize ZMQ
         context = zmq.Context()
         self.socket = context.socket(zmq.SUB)
         self.socket.connect(f"tcp://{zmq_ip}:{zmq_port}")
         self.socket.setsockopt_string(zmq.SUBSCRIBE, "")
-
+         
         # Initialize HDF5
         self.f = h5py.File('continuous_scan.hdf5', 'w')
         self.detector_group = self.f.create_group('exchange/detector')
@@ -49,12 +56,6 @@ class ContinuousScan:
 
         # Start image collection process
         self.process = multiprocessing.Process(target=self.save_images)
-        self.process.start()
-
-    def start_scan(self):
-
-        # Calculate velocity
-        velocity = self.step_size * self.fps
 
         # Move to start
         self.motor.move(0)

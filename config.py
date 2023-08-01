@@ -42,4 +42,5 @@ enable_ZMQ_Callbacks = config.enable_ZMQ_callbacks
 velocity = config.velocity
 zmq_port = config.zmq_port
 zmq_host = config.zmq_host
+acceleration_time = config.acceleration_time
 
