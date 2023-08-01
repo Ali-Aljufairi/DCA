@@ -24,7 +24,8 @@ class ContinuousScan:
         self.fps = epics.caget(fps)
         self.num_images = epics.caput(num_images, 20)
         self.image_shape = (image_size_x, image_size_y)
-        
+        self.motion_stage_pv = motion_stage_pv
+        self.velocity = epics.caput(velocity,20)        
 
         # EPICS initialization
         self.motor = epics.Motor(motion_stage_pv)
