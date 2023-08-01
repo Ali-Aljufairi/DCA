@@ -34,7 +34,7 @@ class ContinuousScan:
         self.trigger_software = trigger_software
         self.image_data = image_data
         self.exposure_time_pv = exposure_time_pv
-        self.frame_rate = frame_rate
+        self.frame_rate = int(epics.caget(frame_rate))
 
         # Set the exposure time
         epics.caput(self.exposure_time_pv, self.exposure_time)
