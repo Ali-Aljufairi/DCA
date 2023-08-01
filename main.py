@@ -21,7 +21,7 @@ class ContinuousScan:
         self.exposure_time_pv = epics.caput(exposure_time_pv, exposure_time)
         self.distance = distance
         self.step_size = step_size
-        self.fps = fps
+        self.fps = epics.caget(fps)
         self.num_images = epics.caput(num_images, 20)
         
 
