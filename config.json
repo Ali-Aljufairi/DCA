@@ -23,6 +23,6 @@
   "max_velocity": "micos:m1.VMAX",
   "accelration_time": "micos:m1.ACCL",
   "zmq_port": "1234",
-  "zmq_host": "localhost"
+  "zmq_host": "localhost",
  " accelaratio_time":"micos:m1.ACCL"
 }
