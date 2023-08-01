@@ -22,7 +22,7 @@ class ContinuousScan:
         self.distance = distance
         self.step_size = step_size
         self.fps = fps
-        self.num_images = num_images
+        self.num_images = epics.caput(num_images, 20)
         
 
         # EPICS initialization
