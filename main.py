@@ -15,7 +15,7 @@ from config import *
 
 class ContinuousScan:
 
-    def __init__(self, exposure_time, distance, step_size, fps, num_images, motion_stage_pv, detector_pv, zmq_ip, zmq_port, exposure_time_pv,ennable_ZMQ_Array, enable_ZMQ_Callbacks, enable_ndarray, enable_ndarray_callbacks,accelaratio_time, trigger_mode, velocity):
+    def __init__(self, exposure_time, distance, step_size, fps, num_images, motion_stage_pv, detector_pv, zmq_ip, zmq_port, exposure_time_pv,ennable_ZMQ_Array, enable_ZMQ_Callbacks, enable_ndarray, enable_ndarray_callbacks,accelaratio_time, trigger_mode, velocity, trigger_software, trigger_source, acq_mode, image_size_x, image_size_y):
 
         self.exposure_time = exposure_time
         self.exposure_time_pv = epics.caput(exposure_time_pv, exposure_time)
@@ -23,6 +23,7 @@ class ContinuousScan:
         self.step_size = step_size
         self.fps = epics.caget(fps)
         self.num_images = epics.caput(num_images, 20)
+        self.image_shape = (image_size_x, image_size_y)
         
 
         # EPICS initialization
@@ -37,7 +38,9 @@ class ContinuousScan:
         epics.caput(enable_ndarray_callbacks, 1)
         epics.caput(ennable_ZMQ_Array, 1)
         epics.caput(enable_ZMQ_Callbacks, 1)
-        epics.caput(trigger_mode, 2)
+        epics.caput(acq_mode, 2)
+        epics.caput(trigger_mode, 1)
+        epics.caput(trigger_source, 0)
 
         # Initialize ZMQ
         context = zmq.Context()
@@ -60,8 +63,9 @@ class ContinuousScan:
         # Move to start
         self.motor.move(0)
 
-        # Start detector acquisition
-        self.detector.acquire(1)
+        # Start detector start software trigger
+        epics.caput(trigger_software, 1)
+        
 
         # Start motion
         self.motor.velocity(velocity)
@@ -96,7 +100,7 @@ class ContinuousScan:
 def main(args):
     Config(args.config_file)
     continues_scan = ContinuousScan(args.exposure_time, args.overall_distance, args.step_size,
-                                    frame_rate_pv, num_images, motion_stage_pv, detector_pv, zmq_host, zmq_port, exposure_time_pv)
+                                    frame_rate_pv, num_images, motion_stage_pv, detector_pv, zmq_host, zmq_port, exposure_time_pv, enable_ZMQ_Array, enable_ZMQ_Callbacks, enable_ndarray, enable_ndarray_callbacks,accelaratio_time, trigger_mode, velocity, trigger_software, trigger_source, acq_mode, image_size_x, image_size_y)
     continues_scan.start_scan()
     continues_scan.stop()
 
