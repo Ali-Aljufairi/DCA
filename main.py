@@ -38,8 +38,8 @@ class ContinuousScan:
 
         # Set the exposure time
         epics.caput(self.exposure_time_pv, self.exposure_time)
-        # Set the acquisition mode to multiple
-        epics.caput(self.acq_mode, 1)
+        # Set the acquisition mode to continuous
+        epics.caput(self.acq_mode, 2)
 
         # Enable the trigger mode to start the acquisition
         epics.caput(self.trigger_mode, 1)
@@ -133,18 +133,20 @@ class ContinuousScan:
             img_dataset.attrs['distance'] = target_position
             img_dataset.attrs['timestamp'] = time.strftime("%Y-%m-%d %H:%M:%S")
             time.sleep(time_per_frame)
-
-        # Perform steady speed phase
+                                            
+               # Perform steady speed phase
         for i in range(int(steady_speed_time / time_per_frame)):
             t = time.time() - initial_time
             target_position = steady_speed_distance + steady_speed * t
             self.move_motor_to_position(target_position)
             image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data, self.image_size_x,
                                             self.image_size_y, 1)
-            img_dataset = data_group.create_dataset(f'image_{i}', data=image_data)  # Updated dataset name
+            img_dataset = data_group.create_dataset(f'image_{i}_{i}', data=image_data)  # Updated dataset name
             img_dataset.attrs['distance'] = target_position
             img_dataset.attrs['timestamp'] = time.strftime("%Y-%m-%d %H:%M:%S")
             time.sleep(time_per_frame)
+
+           
 
 
         # Perform deceleration phase
@@ -154,7 +156,7 @@ class ContinuousScan:
             self.move_motor_to_position(target_position)
             image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data, self.image_size_x,
                                             self.image_size_y, 1)
-            img_dataset = data_group.create_dataset(f'image_{i}', data=image_data)  # Updated dataset name
+            img_dataset = data_group.create_dataset(f'image_{i}_{i}_{i}', data=image_data)  # Updated dataset name
             img_dataset.attrs['distance'] = target_position
             img_dataset.attrs['timestamp'] = time.strftime("%Y-%m-%d %H:%M:%S")
             time.sleep(time_per_frame)
