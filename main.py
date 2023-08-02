@@ -66,11 +66,11 @@ class ContinuousScan:
 
         # Calculate the required parameters
         self.calculate_velocity(fps)
-        self.accel_distance = self.calculate_constant_distance()
+        accel_d= self.calculate_constant_distance()
 
         # Perform the continuous scan
         print(f"Moving to position 0...")
-        self.move_epics_motor(0- self.accel_distance)
+        self.move_epics_motor(0- accel_d)
 
         print("Starting the scan...")
         # Acceleration
