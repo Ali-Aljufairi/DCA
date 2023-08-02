@@ -13,130 +13,77 @@ from stepscan import StepScan
 from config import *
 
 class ContinuousScan:
-    def __init__(self, exposure_time, overall_distance, step_size, detector_pv, motion_stage_pv, camera_acq_pv,
-                 image_size_x, image_size_y, image_counter, num_images, acq_mode, start_acq, acq_status,
-                 trigger_mode, trigger_source, trigger_software, image_data, exposure_time_pv, frame_rate,
-                 acceleration_time_pv):
+    def __init__(self,exposure_time ,total_distance, step_size,detector_pv,motion_stage_pv,camera_acq_pv,image_size_x, image_size_y,image_counter,num_images,acq_mode,start_acq,acq_status,trigger_mode,trigger_source,trigger_software,image_data, exposure_time_pv,frame_rate_pv,accelaration_time_pv):
         self.exposure_time = exposure_time
-        self.overall_distance = overall_distance
+        self.total_distance = total_distance
         self.step_size = step_size
-        self.detector = epics.PV(detector_pv)
-        self.motion_stage = epics.Motor(motion_stage_pv)
-        self.camera_acq_pv = camera_acq_pv
-        self.image_size_x = int(epics.caget(image_size_x))
-        self.image_size_y = int(epics.caget(image_size_y))
-        self.image_counter = image_counter
-        self.num_images = num_images
-        self.acq_mode = acq_mode
-        self.start_acq = start_acq
-        self.acq_status = acq_status
-        self.trigger_mode = trigger_mode
-        self.trigger_source = trigger_source
-        self.trigger_software = trigger_software
-        self.image_data = image_data
-        self.exposure_time_pv = exposure_time_pv
-        self.frame_rate = int(epics.caget(frame_rate))
+        self.motion_stage_pv = motion_stage_pv
+        self.fps_pv = frame_rate_pv
+        self.acceleration_time = None
+        self.motion_stage = None
+        self.velocity = None
+        self.accel_distance = None
+        self.deccel_distance = None
+        self.constant_distance = None
+        self.acceleration_time_pv = accelaration_time_pv
 
-        # Set the exposure time
-        epics.caput(self.exposure_time_pv, self.exposure_time)
-        # Set the acquisition mode to continuous
-        epics.caput(self.acq_mode, 2)
+    def calculate_velocity(self, fps):
+        time_per_frame = 1 / fps
+        time_no_accel = time_per_frame * self.total_distance
+        self.velocity = self.total_distance / time_no_accel
 
-        # Enable the trigger mode to start the acquisition
-        epics.caput(self.trigger_mode, 1)
-        epics.caput(self.camera_acq_pv, 1)
+    def calculate_accel_time(self):
+        self.acceleration_time = int(epics.caget(self.acceleration_time_pv))
 
-        # Set the trigger source to 0 (software triggering)
-        epics.caput(self.trigger_source, 0)
+    def calculate_total_time(self, fps):
+        self.calculate_accel_time()
+        time_per_frame = 1 / fps
+        time_no_accel = time_per_frame * self.total_distance
+        self.total_time = self.acceleration_time + time_no_accel + self.deccel_time
 
-        # Get the acceleration time from an external source (e.g., EPICS PV)
-        self.acceleration_time = int(epics.caget(acceleration_time_pv))
+    def calculate_accel_distance(self):
+        self.calculate_total_time()
+        self.accel_distance = self.total_distance * self.acceleration_time / self.total_time
+        self.deccel_distance = self.accel_distance
 
-    def move_motor_to_position(self, position):
+    def calculate_constant_distance(self):
+        self.calculate_accel_distance()
+        self.constant_distance = self.total_distance - (self.accel_distance + self.deccel_distance)
+
+    def move_epics_motor(self, position):
+        # Move the motor to the desired position
         self.motion_stage.move(position)
         while not self.motion_stage.done_moving:
             time.sleep(0.1)
 
-    def save_image(self, image_data, file_name, image_size_x, image_size_y):
-        if not os.path.exists("images"):
-            os.makedirs("images")
-        image_reshaped = np.reshape(image_data, (image_size_y, image_size_x))
-        file_path = os.path.join("images", file_name.replace("npy", "png"))
-        image_pil = Image.fromarray(image_reshaped)
-        image_pil.save(file_path)
-        print(f"Saved image to {file_path}")
+        print(f"Motor moved to position: {position}")
 
-    def acquire_image(self, trigger_software, image_counter, image_data, image_size_x, image_size_y, num_steps):
-        # Wait for the image counter to change, indicating a new image has been acquired
-        initial_counter = epics.caget(image_counter)
+    def perform_continuous_scan(self):
+        # Connect to the motion stage and get the fps value
+        self.motion_stage = epics.Motor(self.motion_stage_pv)
+        fps = epics.caget(self.fps_pv)
 
-        # Trigger the software trigger to initiate image acquisition
-        epics.caput(trigger_software, 1)
-
-        while True:
-            time.sleep(0.1)
-            current_counter = epics.caget(image_counter)
-            if current_counter != initial_counter:
-                print(f"Image acquired with counter {current_counter}")
-                break
-
-        # Retrieve the image data
-        image_data = epics.caget(image_data)
-        image_data = np.reshape(image_data, (self.image_size_y, self.image_size_x))
-        return image_data
-
-    def continuous_scan(self):
-        # Calculate time per frame based on the frame rate
-        time_per_frame = 1.0 / self.frame_rate
-
-        # Calculate the time needed for the entire scan (including acceleration phase)
-        total_distance = self.overall_distance * self.step_size
-        total_time = 2 * self.acceleration_time + (total_distance - 2 * self.acceleration_time) / self.frame_rate
-
-        # Start the scan
-        f = h5py.File('continuous_scan.hdf5', 'w')
-        detector_group = f.create_group('exchange/detector')
-        data_group = f.create_group('exchange/data')
-        detector_group.attrs['exposure_time'] = self.exposure_time
-        detector_group.attrs['image_size_x'] = self.image_size_x
-        detector_group.attrs['image_size_y'] = self.image_size_y
-        detector_group.attrs['Num_of_image'] = 1  # Continuous scan produces a single dataset
-        detector_group.attrs['local_name'] = "SESAME Detector"
-        detector_group.attrs['pixel_size'] = 20E-6  # example
-
-        # Initial position (0)
-        self.move_motor_to_position(0)
-        initial_time = time.time()
+        # Calculate the required parameters
+        self.calculate_velocity(fps)
+        self.calculate_constant_distance()
 
         # Perform the continuous scan
-        step_distance = self.step_size
-        while step_distance <= total_distance:
-            # Move the motor to the target position
-            self.move_motor_to_position(step_distance)
+        print(f"Moving to position 0...")
+        self.move_epics_motor(0)
 
-            # Acquire an image
-            image_data = self.acquire_image(self.trigger_software, self.image_counter, self.image_data,
-                                            self.image_size_x, self.image_size_y, 1)
+        print("Starting the scan...")
+        # Acceleration
+        print(f"Accelerating to steady speed...")
+        self.move_epics_motor(self.accel_distance)
 
-            # Save the acquired image to the HDF5 file
-            img_dataset = data_group.create_dataset(f'image_{step_distance}', data=image_data)
-            img_dataset.attrs['distance'] = step_distance
-            img_dataset.attrs['timestamp'] = time.strftime("%Y-%m-%d %H:%M:%S")
+        # Steady speed
+        print("Acquiring data at steady speed...")
 
-            # Increment the step distance
-            step_distance += self.step_size
+        # Deceleration
+        print(f"Decelerating and moving to position 0...")
+        self.move_epics_motor(0)
 
-            # Wait to maintain the frame rate
-            elapsed_time = time.time() - initial_time
-            if elapsed_time < total_time:
-                remaining_time = total_time - elapsed_time
-                time.sleep(remaining_time)
-
-        # Final move back to the initial position
-        self.move_motor_to_position(0)
-
-        # Close the HDF5 file
-        f.close()
+        print("Scan completed.")
 
 
 
