@@ -114,7 +114,7 @@ def main(args):
 
     )
 
-    continuous_scan.continuous_scan()
+    continuous_scan.perform_continuous_scan()
 
 
 if __name__ == "__main__":
