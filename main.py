@@ -40,7 +40,7 @@ class ContinuousScan:
         self.calculate_accel_time()
         time_per_frame = 1 / fps
         time_no_accel = time_per_frame * self.total_distance
-        self.total_time = self.acceleration_time + time_no_accel 
+        self.total_time = (self.acceleration_time * 2) + time_no_accel 
 
     def calculate_accel_distance(self):
         self.calculate_total_time(self.fps)
@@ -66,11 +66,11 @@ class ContinuousScan:
 
         # Calculate the required parameters
         self.calculate_velocity(fps)
-        self.calculate_constant_distance()
+        self.accel_distance = self.calculate_constant_distance()
 
         # Perform the continuous scan
         print(f"Moving to position 0...")
-        self.move_epics_motor(0)
+        self.move_epics_motor(0- self.accel_distance)
 
         print("Starting the scan...")
         # Acceleration
@@ -82,7 +82,7 @@ class ContinuousScan:
 
         # Deceleration
         print(f"Decelerating and moving to position 0...")
-        self.move_epics_motor(0)
+        self.move_epics_motor(200)
 
         print("Scan completed.")
 
