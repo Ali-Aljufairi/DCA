@@ -32,7 +32,7 @@ class ContinuousScan:
         self.trigger_mode = trigger_mode
         self.trigger_source= trigger_source
         self.trigger_software = trigger_software
-        self.acceleration_time = int(epics.caget(self.acceleration_time_pv))
+        self.acceleration_time = int(epics.caget(accelaration_time_pv))
         self.motion_stage = None
         self.velocity = None
         self.accel_distance = None
