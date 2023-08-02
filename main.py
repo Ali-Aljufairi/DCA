@@ -28,6 +28,7 @@ class ContinuousScan:
         self.image_size_y = int(epics.caget(image_size_y))
         self.image_counter = image_counter
         self.num_images = num_images
+        self.image_data = image_data
         self.acq_mode = acq_mode
         self.start_acq = start_acq
         self.acq_status = acq_status
