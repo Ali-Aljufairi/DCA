@@ -12,8 +12,9 @@ import multiprocessing
 from stepscan import StepScan
 from config import *
 
+
 class ContinuousScan:
-    def __init__(self,exposure_time ,total_distance, step_size,detector_pv,motion_stage_pv,camera_acq_pv,image_size_x, image_size_y,image_counter,num_images,acq_mode,start_acq,acq_status,trigger_mode,trigger_source,trigger_software,image_data, exposure_time_pv,frame_rate_pv,accelaration_time_pv):
+    def __init__(self, exposure_time, total_distance, step_size, detector_pv, motion_stage_pv, camera_acq_pv, image_size_x, image_size_y, image_counter, num_images, acq_mode, start_acq, acq_status, trigger_mode, trigger_source, trigger_software, image_data, exposure_time_pv, frame_rate_pv, accelaration_time_pv):
         self.exposure_time = exposure_time
         self.total_distance = total_distance
         self.step_size = step_size
@@ -40,17 +41,19 @@ class ContinuousScan:
         self.calculate_accel_time()
         time_per_frame = 1 / fps
         time_no_accel = time_per_frame * self.total_distance
-        self.total_time = (self.acceleration_time * 2) + time_no_accel 
+        self.total_time = (self.acceleration_time * 2) + time_no_accel
 
     def calculate_accel_distance(self):
         self.calculate_total_time(self.fps)
-        self.accel_distance = self.total_distance * self.acceleration_time / self.total_time
+        self.accel_distance = self.total_distance * \
+            self.acceleration_time / self.total_time
         self.deccel_distance = self.accel_distance
         return int(self.accel_distance)
 
     def calculate_constant_distance(self):
         self.calculate_accel_distance()
-        self.constant_distance = self.total_distance - (self.accel_distance + self.deccel_distance)
+        self.constant_distance = self.total_distance - \
+            (self.accel_distance + self.deccel_distance)
         return int(self.constant_distance)
 
     def move_epics_motor(self, position):
@@ -61,25 +64,34 @@ class ContinuousScan:
 
         print(f"Motor moved to position: {position}")
 
+    def setup_camera(self):
+        epics.caput(self.exposure_time_pv, self.exposure_time)
+        epics.caput(self.acq_mode, 2)
+        epics.caput(self.trigger_mode, 1)
+        epics.caput(self.trigger_source, 0)
+        epics.caput(self.camera_acq_pv, 0)
+    
+
     def perform_continuous_scan(self):
-        # Connect to the motion stage and get the fps value
+        # Connect to the motion stage and get the fps value and setup the camera
+        self.setup_camera()
         self.motion_stage = epics.Motor(self.motion_stage_pv)
         fps = epics.caget(self.fps_pv)
 
         # Calculate the required parameters
         self.calculate_velocity(fps)
-        accel_d= self.calculate_constant_distance()
+        accel_d = self.calculate_constant_distance()
         print(f"accel_d: {accel_d}")
-
 
         # Perform the continuous scan
         print(f"Moving to position 0...")
-        self.move_epics_motor(0- int(accel_d))
+        self.move_epics_motor(0 - int(accel_d))
         print("Starting the scan...")
         print(f"Accelerating to steady speed...")
 
         # Steady speed
         print("Acquiring data at steady speed...")
+        epics.caput(self.trigger_software, 1)
 
         # Deceleration
         print(f"Decelerating and moving to position 0...")
@@ -87,7 +99,6 @@ class ContinuousScan:
         self.move_epics_motor(0)
 
         print("Scan completed.")
-
 
 
 def main(args):
@@ -113,7 +124,7 @@ def main(args):
         exposure_time_pv,
         frame_rate_pv,
         accelaration_time_pv
-        
+
 
     )
 
