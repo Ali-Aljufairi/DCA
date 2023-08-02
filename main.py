@@ -102,7 +102,6 @@ class ContinuousScan:
         initial_counter = epics.caget(self.image_counter)
 
         while True:
-            time.sleep(0.1)
             current_counter = epics.caget(self.image_counter)
             if current_counter != initial_counter:
                 print(f"Image acquired with counter {current_counter}")
