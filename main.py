@@ -46,10 +46,12 @@ class ContinuousScan:
         self.calculate_total_time(self.fps)
         self.accel_distance = self.total_distance * self.acceleration_time / self.total_time
         self.deccel_distance = self.accel_distance
+        return int(self.accel_distance)
 
     def calculate_constant_distance(self):
         self.calculate_accel_distance()
         self.constant_distance = self.total_distance - (self.accel_distance + self.deccel_distance)
+        return int(self.constant_distance)
 
     def move_epics_motor(self, position):
         # Move the motor to the desired position
