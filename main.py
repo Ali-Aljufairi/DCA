@@ -79,7 +79,7 @@ class ContinuousScan:
     def setup_camera(self):
         epics.caput(self.exposure_time_pv, self.exposure_time)
         epics.caput(self.acq_mode, 2)
-        epics.caput(self.trigger_mode, 1)
+        epics.caput(self.trigger_mode, 0)
         epics.caput(self.trigger_source, 0)
         epics.caput(self.camera_acq_pv, 0)
     
@@ -103,7 +103,7 @@ class ContinuousScan:
 
         # Steady speed
         print("Acquiring data at steady speed...")
-        epics.caput(self.trigger_software, 1)
+        epics.caput(self.start_acq, 1)
 
         # Deceleration
         print(f"Decelerating and moving to position 0...")
