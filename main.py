@@ -84,7 +84,7 @@ class ContinuousScan:
         # Deceleration
         print(f"Decelerating and moving to position 0...")
         self.move_epics_motor(0 + int(accel_d))
-        self.move_epics_motor(200)
+        self.move_epics_motor(0)
 
         print("Scan completed.")
 
