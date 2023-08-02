@@ -40,7 +40,7 @@ class ContinuousScan:
         self.calculate_accel_time()
         time_per_frame = 1 / fps
         time_no_accel = time_per_frame * self.total_distance
-        self.total_time = self.acceleration_time + time_no_accel + self.deccel_time
+        self.total_time = self.acceleration_time + time_no_accel 
 
     def calculate_accel_distance(self):
         self.calculate_total_time(self.fps)
