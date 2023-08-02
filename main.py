@@ -70,10 +70,8 @@ class ContinuousScan:
 
         # Perform the continuous scan
         print(f"Moving to position 0...")
-        self.move_epics_motor(0- accel_d)
-
+        self.move_epics_motor(0- int(accel_d))
         print("Starting the scan...")
-        # Acceleration
         print(f"Accelerating to steady speed...")
         self.move_epics_motor(self.accel_distance)
 
