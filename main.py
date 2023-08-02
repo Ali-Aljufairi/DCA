@@ -77,13 +77,13 @@ class ContinuousScan:
         self.move_epics_motor(0- int(accel_d))
         print("Starting the scan...")
         print(f"Accelerating to steady speed...")
-        self.move_epics_motor(self.accel_distance)
 
         # Steady speed
         print("Acquiring data at steady speed...")
 
         # Deceleration
         print(f"Decelerating and moving to position 0...")
+        self.move_epics_motor(0 + int(accel_d))
         self.move_epics_motor(200)
 
         print("Scan completed.")
