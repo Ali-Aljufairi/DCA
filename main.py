@@ -150,9 +150,7 @@ class ContinuousScan:
         print("Acquiring data at steady speed...")
         epics.caput(self.start_acq, 1)
 
-        # Wait for the steady speed acquisition to complete
-        while epics.caget(self.acq_status) != 0:
-            time.sleep(0.1)
+        
 
         # Deceleration
         print(f"Decelerating and moving to position 0...")
