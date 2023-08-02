@@ -26,6 +26,7 @@ class ContinuousScan:
         self.deccel_distance = None
         self.constant_distance = None
         self.acceleration_time_pv = accelaration_time_pv
+        self.fps = epics.caget(self.fps_pv)
 
     def calculate_velocity(self, fps):
         time_per_frame = 1 / fps
@@ -42,7 +43,7 @@ class ContinuousScan:
         self.total_time = self.acceleration_time + time_no_accel + self.deccel_time
 
     def calculate_accel_distance(self):
-        self.calculate_total_time()
+        self.calculate_total_time(self.fps)
         self.accel_distance = self.total_distance * self.acceleration_time / self.total_time
         self.deccel_distance = self.accel_distance
 
