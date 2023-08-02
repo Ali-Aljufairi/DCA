@@ -43,6 +43,8 @@ class ContinuousScan:
 
     def calculate_velocity(self, fps):
         time_per_frame = 1 / fps
+        print(f"Time per frame: {time_per_frame}")
+        
         time_no_accel = time_per_frame * self.total_distance
         self.velocity = self.total_distance / time_no_accel
 
