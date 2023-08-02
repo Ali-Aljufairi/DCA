@@ -157,15 +157,15 @@ class ContinuousScan:
         self.move_epics_motor(0 + int(accel_d))
 
         # Save the data to HDF5 file
-        with h5py.File(self.hdf_file, "r+") as f:
-            data_group = f["scan_data"]["image_data"]
-            for step in range(self.num_steps):
-                target_position = step * self.step_size
-                self.move_epics_motor(target_position)
-                self.save_image_to_hdf5(data_group, step, target_position)
+        # with h5py.File(self.hdf_file, "r+") as f:
+        #     data_group = f["scan_data"]["image_data"]
+        #     for step in range(self.num_steps):
+        #         target_position = step * self.step_size
+        #         self.move_epics_motor(target_position)
+        #         self.save_image_to_hdf5(data_group, step, target_position)
 
-        print("Scan completed.")
-        print(f"Saved data in {self.hdf_file}")
+        # print("Scan completed.")
+        # print(f"Saved data in {self.hdf_file}")
 
 
 def main(args):
