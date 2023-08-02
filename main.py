@@ -18,6 +18,8 @@ class ContinuousScan:
         self.exposure_time = exposure_time
         self.total_distance = total_distance
         self.step_size = step_size
+        self.num_steps =int(np.ceil(self.total_distance / self.step_size))
+        self.hdf_file = "scan_data.hdf5"
         self.exposure_time_pv = exposure_time_pv
         self.motion_stage_pv = motion_stage_pv
         self.fps_pv = frame_rate_pv
@@ -40,6 +42,27 @@ class ContinuousScan:
         self.constant_distance = None
         self.acceleration_time_pv = accelaration_time_pv
         self.fps = epics.caget(self.fps_pv)
+    def setup_hdf5_file(self):
+        # Create or open an HDF5 file to store the data
+        with h5py.File(self.hdf_file, "w") as f:
+            # Create the root group
+            root_group = f.create_group("scan_data")
+
+            # Add metadata to the root group
+            root_group.attrs["exposure_time"] = self.exposure_time
+            root_group.attrs["total_distance"] = self.total_distance
+            root_group.attrs["step_size"] = self.step_size
+            root_group.attrs["num_images"] = self.num_images
+            root_group.attrs["acq_mode"] = self.acq_mode
+            root_group.attrs["trigger_mode"] = self.trigger_mode
+            root_group.attrs["trigger_source"] = self.trigger_source
+
+            # Create the image data group
+            data_group = root_group.create_group("image_data")
+
+            # Add image size metadata
+            data_group.attrs["image_size_x"] = self.image_size_x
+            data_group.attrs["image_size_y"] = self.image_size_y
 
     def calculate_total_time(self, fps): 
         time_per_frame = 1/fps
@@ -72,6 +95,28 @@ class ContinuousScan:
             time.sleep(0.1)
 
         print(f"Motor moved to position: {position}")
+        
+    def save_image_to_hdf5(self, data_group, step, target_position):
+        # Wait for the image counter to change, indicating a new image has been acquired
+        initial_counter = epics.caget(self.image_counter)
+
+        while True:
+            time.sleep(0.1)
+            current_counter = epics.caget(self.image_counter)
+            if current_counter != initial_counter:
+                print(f"Image acquired with counter {current_counter}")
+                break
+
+        # Retrieve the image data
+        image_data = epics.caget(self.image_data)
+        image_data = np.reshape(image_data, (self.image_size_y, self.image_size_x))
+
+        # Create dataset
+        img_dataset = data_group.create_dataset(f"image_{step}", data=image_data)
+
+        # Add metadata
+        img_dataset.attrs["distance"] = target_position
+        img_dataset.attrs["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
 
     def setup_camera(self):
         epics.caput(self.exposure_time_pv, self.exposure_time)
@@ -91,6 +136,8 @@ class ContinuousScan:
         self.calculate_velocity(fps)
         accel_d = self.calculate_accel_distance()
         print(f"accel_d: {accel_d}")
+        
+        self.setup_hdf5_file()
 
         # Perform the continuous scan
         print(f"Moving to position 0...")
@@ -103,11 +150,24 @@ class ContinuousScan:
         print("Acquiring data at steady speed...")
         epics.caput(self.start_acq, 1)
 
+        # Wait for the steady speed acquisition to complete
+        while epics.caget(self.acq_status) != 0:
+            time.sleep(0.1)
+
         # Deceleration
         print(f"Decelerating and moving to position 0...")
         self.move_epics_motor(0 + int(accel_d))
 
+        # Save the data to HDF5 file
+        with h5py.File(self.hdf_file, "r+") as f:
+            data_group = f["scan_data"]["image_data"]
+            for step in range(self.num_steps):
+                target_position = step * self.step_size
+                self.move_epics_motor(target_position)
+                self.save_image_to_hdf5(data_group, step, target_position)
+
         print("Scan completed.")
+        print(f"Saved data in {self.hdf_file}")
 
 
 def main(args):
