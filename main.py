@@ -51,8 +51,6 @@ class ContinuousScan:
         print(f"FPS: {fps}")
         self.velocity = self.total_distance / self.total_time
         return int(self.velocity)
-        
-        
 
     def calculate_accel_distance(self):
         self.calculate_total_time(self.fps)
