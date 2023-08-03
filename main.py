@@ -40,7 +40,7 @@ class ContinuousScan:
         self.acceleration_time_pv = accelaration_time_pv
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.PUB)
-        self.socket.bind(f"tcp://{zmq_host}:{zmq_port}")
+        self.socket.bind(f"tcp://127.0.0.1:3000")
         self.fps = epics.caget(self.fps_pv)
         self.enable_ndarray = epics.caput(enable_ndarray, 1)
         self.enable_ndarray_callbacks = epics.caput(
@@ -194,15 +194,7 @@ class ContinuousScan:
         print("Scan completed.")
         print(f"Saved data in {self.hdf_file}")
 
-        # Save the data to HDF5 file
-        # with h5py.File(self.hdf_file, "r+") as f:
-        #     data_group = f["scan_data"]["image_data"]
-        #     for step in range(self.num_steps):
-        #         target_position = step * self.step_size
-        #         self.move_epics_motor(target_position)
-        #         self.save_image_to_hdf5(data_group, step, target_position)
-
-
+        
 def main(args):
     Config(args.config_file)
     continuous_scan = ContinuousScan(
