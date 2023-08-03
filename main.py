@@ -1,24 +1,20 @@
 import numpy as np
 import h5py
 import argparse
-import json
 import time
 import epics
-import os
 import zmq
-from PIL import Image
-import threading
 import multiprocessing
 from stepscan import StepScan
 from config import *
 
 
 class ContinuousScan:
-    def __init__(self, exposure_time, total_distance, step_size, detector_pv, motion_stage_pv, camera_acq_pv, image_size_x, image_size_y, image_counter, num_images, acq_mode, start_acq, acq_status, trigger_mode, trigger_source, trigger_software, image_data, exposure_time_pv, frame_rate_pv, accelaration_time_pv):
+    def __init__(self, exposure_time, total_distance, step_size, detector_pv, motion_stage_pv, camera_acq_pv, image_size_x, image_size_y, image_counter, num_images, acq_mode, start_acq, acq_status, trigger_mode, trigger_source, trigger_software, image_data, exposure_time_pv, frame_rate_pv, accelaration_time_pv, enable_ndarray, enable_ndarray_callbacks, enable_ZMQ_Array, enable_ZMQ_callbacks, zmq_port, zmq_host):
         self.exposure_time = exposure_time
         self.total_distance = total_distance
         self.step_size = step_size
-        self.num_steps =int(np.ceil(self.total_distance / self.step_size))
+        self.num_steps = int(np.ceil(self.total_distance / self.step_size))
         self.hdf_file = "scan_data.hdf5"
         self.exposure_time_pv = exposure_time_pv
         self.motion_stage_pv = motion_stage_pv
@@ -33,7 +29,7 @@ class ContinuousScan:
         self.start_acq = start_acq
         self.acq_status = acq_status
         self.trigger_mode = trigger_mode
-        self.trigger_source= trigger_source
+        self.trigger_source = trigger_source
         self.trigger_software = trigger_software
         self.acceleration_time = int(epics.caget(accelaration_time_pv))
         self.motion_stage = None
@@ -42,7 +38,34 @@ class ContinuousScan:
         self.deccel_distance = None
         self.constant_distance = None
         self.acceleration_time_pv = accelaration_time_pv
+        self.context = zmq.Context()
+        self.socket = self.context.socket(zmq.PUB)
+        self.socket.bind(f"tcp://{zmq_host}:{zmq_port}")
         self.fps = epics.caget(self.fps_pv)
+        self.enable_ndarray = epics.caput(enable_ndarray, 1)
+        self.enable_ndarray_callbacks = epics.caput(
+            enable_ndarray_callbacks, 1)
+        self.enable_ZMQ_Array = epics.caput(enable_ZMQ_Array, 1)
+        self.enable_ZMQ_callbacks = epics.caput(enable_ZMQ_callbacks, 1)
+
+    def send_zmq_message(self, message):
+        self.socket.send_string(message)
+
+    def scan_worker(self, step, target_position):
+        # Move to the target position and wait for the motion to complete
+        self.move_epics_motor(target_position)
+
+        # Notify that the image is ready for acquisition
+        self.send_zmq_message(f"ImageReady {step}")
+
+        # Wait for the acquisition to complete
+        self.send_zmq_message(f"AcquireImage {step}")
+
+        # Save the image data to HDF5 file
+        with h5py.File(self.hdf_file, "r+") as f:
+            data_group = f["scan_data"]["image_data"]
+            self.save_image_to_hdf5(data_group, step, target_position)
+
     def setup_hdf5_file(self):
         # Create or open an HDF5 file to store the data
         with h5py.File(self.hdf_file, "w") as f:
@@ -65,11 +88,11 @@ class ContinuousScan:
             data_group.attrs["image_size_x"] = self.image_size_x
             data_group.attrs["image_size_y"] = self.image_size_y
 
-    def calculate_total_time(self, fps): 
+    def calculate_total_time(self, fps):
         time_per_frame = 1/fps
         self.total_time = time_per_frame * self.total_distance
         return self.total_time
-    
+
     def calculate_velocity(self, fps):
         self.calculate_total_time(fps)
         print(f"FPS: {fps}")
@@ -79,7 +102,7 @@ class ContinuousScan:
     def calculate_accel_distance(self):
         self.calculate_total_time(self.fps)
         self.accel_distance = (self.total_distance *
-            self.acceleration_time) / self.total_time
+                               self.acceleration_time) / self.total_time
         self.deccel_distance = self.accel_distance
         return int(self.accel_distance)
 
@@ -96,7 +119,7 @@ class ContinuousScan:
             time.sleep(0.1)
 
         print(f"Motor moved to position: {position}")
-        
+
     def save_image_to_hdf5(self, data_group, step, target_position):
         # Wait for the image counter to change, indicating a new image has been acquired
         initial_counter = epics.caget(self.image_counter)
@@ -109,10 +132,12 @@ class ContinuousScan:
 
         # Retrieve the image data
         image_data = epics.caget(self.image_data)
-        image_data = np.reshape(image_data, (self.image_size_y, self.image_size_x))
+        image_data = np.reshape(
+            image_data, (self.image_size_y, self.image_size_x))
 
         # Create dataset
-        img_dataset = data_group.create_dataset(f"image_{step}", data=image_data)
+        img_dataset = data_group.create_dataset(
+            f"image_{step}", data=image_data)
 
         # Add metadata
         img_dataset.attrs["distance"] = target_position
@@ -124,7 +149,6 @@ class ContinuousScan:
         epics.caput(self.trigger_mode, 0)
         epics.caput(self.trigger_source, 0)
         epics.caput(self.camera_acq_pv, 0)
-    
 
     def perform_continuous_scan(self):
         # Connect to the motion stage and get the fps value and setup the camera
@@ -136,8 +160,11 @@ class ContinuousScan:
         self.calculate_velocity(fps)
         accel_d = self.calculate_accel_distance()
         print(f"accel_d: {accel_d}")
-        
+
         self.setup_hdf5_file()
+
+        # create a multiprocessing pool
+        pool = multiprocessing.Pool()
 
         # Perform the continuous scan
         print(f"Moving to position 0...")
@@ -150,11 +177,22 @@ class ContinuousScan:
         print("Acquiring data at steady speed...")
         epics.caput(self.start_acq, 1)
 
-        
+        # create scan tasks and run them in parallel
+
+        tasks = [(step, step * self.step_size)
+                 for step in range(self.num_steps)]
+        pool.starmap(self.scan_worker, tasks)
 
         # Deceleration
         print(f"Decelerating and moving to position 0...")
         self.move_epics_motor(0 + int(accel_d))
+
+        # Close the multiprocessing pool
+        pool.close()
+        pool.join()
+
+        print("Scan completed.")
+        print(f"Saved data in {self.hdf_file}")
 
         # Save the data to HDF5 file
         # with h5py.File(self.hdf_file, "r+") as f:
@@ -163,9 +201,6 @@ class ContinuousScan:
         #         target_position = step * self.step_size
         #         self.move_epics_motor(target_position)
         #         self.save_image_to_hdf5(data_group, step, target_position)
-
-        # print("Scan completed.")
-        # print(f"Saved data in {self.hdf_file}")
 
 
 def main(args):
@@ -190,7 +225,14 @@ def main(args):
         image_data,
         exposure_time_pv,
         frame_rate_pv,
-        accelaration_time_pv
+        accelaration_time_pv,
+        enable_ndarray,
+        enable_ndarray_callbacks,
+        enable_ZMQ_Array,
+        enable_ZMQ_Callbacks,
+        zmq_port,
+        zmq_host
+
 
 
     )
