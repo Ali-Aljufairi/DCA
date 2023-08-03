@@ -52,7 +52,11 @@ class ContinuousScan:
         self.socket.send_string(message)
 
     def scan_worker(self, step, target_position):
+        motor = epics.Motor(self.motion_stage_pv)
+
+
         # Move to the target position and wait for the motion to complete
+        
         self.move_epics_motor(target_position)
 
         # Notify that the image is ready for acquisition
