@@ -31,7 +31,7 @@ class ContinuousScan:
         self.trigger_mode = trigger_mode
         self.trigger_source = trigger_source
         self.trigger_software = trigger_software
-        self.acceleration_time = int(epics.caget(accelaration_time_pv))
+        self.acceleration_time = float(epics.caget(accelaration_time_pv))
         self.motion_stage = None
         self.velocity = None
         self.accel_distance = None
@@ -161,14 +161,10 @@ class ContinuousScan:
         # Calculate the required parameters
         self.calculate_velocity(fps)
         accel_d = self.calculate_accel_distance()
-        print (f"accel_d: {accel_d}, type: {type(accel_d)}")
+        print(f"accel_d: {accel_d}, type: {type(accel_d)}")
 
         self.setup_hdf5_file()
 
-        # create a multiprocessing pool
-        # pool = multiprocessing.Pool()
-
-        # Perform the continuous scan
         print(f"Moving to position 0 - accel_d...")
         self.move_epics_motor(0 - float(accel_d))
         print("Starting the scan...")
@@ -179,24 +175,14 @@ class ContinuousScan:
         print("Acquiring data at steady speed...")
         epics.caput(self.start_acq, 1)
 
-        # create scan tasks and run them in parallel
-
-        # tasks = [(step, step * self.step_size)
-        #          for step in range(self.num_steps)]
-        # pool.starmap(self.scan_worker, tasks)
-
-        # Deceleration
         print(f"Decelerating and moving to position 0...")
         self.move_epics_motor(0 + float(accel_d))
 
-        # # Close the multiprocessing pool
-        # pool.close()
-        # pool.join()
 
         print("Scan completed.")
         print(f"Saved data in {self.hdf_file}")
 
-        
+
 def main(args):
     Config(args.config_file)
     continuous_scan = ContinuousScan(
@@ -227,10 +213,10 @@ def main(args):
         zmq_port,
         zmq_host)
 
-    #continuous_scan.perform_continuous_scan()
+    # continuous_scan.perform_continuous_scan()
 
     position = Queue()
-    #tasks_that_are_done = Queue()
+    # tasks_that_are_done = Queue()
     processes = []
 
     # # creating processes
@@ -238,7 +224,7 @@ def main(args):
     #     p = Process(target=continuous_scan.perform_continuous_scan(), args=(tasks_to_accomplish, tasks_that_are_done))
     #     processes.append(p)
     #     p.start()
-    
+
     p = Process(target=continuous_scan.perform_continuous_scan(), args=())
     processes.append(p)
     p.start()
