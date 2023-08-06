@@ -100,20 +100,20 @@ class ContinuousScan:
         self.calculate_total_time(fps)
         print(f"FPS: {fps}")
         self.velocity = self.total_distance / self.total_time
-        return int(self.velocity)
+        return float(self.velocity)
 
     def calculate_accel_distance(self):
         self.calculate_total_time(self.fps)
         self.accel_distance = (self.total_distance *
                                self.acceleration_time) / self.total_time
         self.deccel_distance = self.accel_distance
-        return int(self.accel_distance)
+        return float(self.accel_distance)
 
     def calculate_constant_distance(self):
         self.calculate_accel_distance()
         self.constant_distance = self.total_distance - \
             (self.accel_distance + self.deccel_distance)
-        return int(self.constant_distance)
+        return float(self.constant_distance)
 
     def move_epics_motor(self, position):
         # Move the motor to the desired position
@@ -162,7 +162,7 @@ class ContinuousScan:
         # Calculate the required parameters
         self.calculate_velocity(fps)
         accel_d = self.calculate_accel_distance()
-        print(f"accel_d: {accel_d}")
+        print (f"accel_d: {accel_d}, type: {type(accel_d)}")
 
         self.setup_hdf5_file()
 
@@ -171,10 +171,10 @@ class ContinuousScan:
 
         # Perform the continuous scan
         print(f"Moving to position 0 - accel_d...")
-        self.move_epics_motor(0 - int(accel_d))
+        self.move_epics_motor(0 - float(accel_d))
         print("Starting the scan...")
         print(f"Accelerating to steady speed...")
-        self.move_epics_motor(self.total_distance + int(accel_d))
+        self.move_epics_motor(self.total_distance + float(accel_d))
 
         # Steady speed
         print("Acquiring data at steady speed...")
@@ -188,7 +188,7 @@ class ContinuousScan:
 
         # Deceleration
         print(f"Decelerating and moving to position 0...")
-        self.move_epics_motor(0 + int(accel_d))
+        self.move_epics_motor(0 + float(accel_d))
 
         # # Close the multiprocessing pool
         # pool.close()
