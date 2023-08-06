@@ -100,7 +100,7 @@ class ContinuousScan:
         self.calculate_total_time(fps)
         print(f"FPS: {fps}")
         self.velocity = self.total_distance / self.total_time
-        return int(self.velocity)
+        return float(self.velocity)
 
     def calculate_accel_distance(self):
         self.calculate_total_time(self.fps)
@@ -171,10 +171,10 @@ class ContinuousScan:
 
         # Perform the continuous scan
         print(f"Moving to position 0 - accel_d...")
-        self.move_epics_motor(0 - int(accel_d))
+        self.move_epics_motor(0 - float(accel_d))
         print("Starting the scan...")
         print(f"Accelerating to steady speed...")
-        self.move_epics_motor(self.total_distance + int(accel_d))
+        self.move_epics_motor(self.total_distance + float(accel_d))
 
         # Steady speed
         print("Acquiring data at steady speed...")
@@ -188,7 +188,7 @@ class ContinuousScan:
 
         # Deceleration
         print(f"Decelerating and moving to position 0...")
-        self.move_epics_motor(0 + int(accel_d))
+        self.move_epics_motor(0 + float(accel_d))
 
         # # Close the multiprocessing pool
         # pool.close()
