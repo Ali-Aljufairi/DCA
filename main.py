@@ -176,12 +176,6 @@ class ContinuousScan:
         print("Acquiring data at steady speed...")
         epics.caput(self.start_acq, 1)
 
-        # create scan tasks and run them in parallel
-
-        tasks = [(step, step * self.step_size)
-                 for step in range(self.num_steps)]
-        pool.starmap(self.scan_worker, tasks)
-
         # Deceleration
         print(f"Decelerating and moving to position 0...")
         self.move_epics_motor(0 + int(accel_d))
