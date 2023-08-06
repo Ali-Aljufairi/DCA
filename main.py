@@ -174,7 +174,7 @@ class ContinuousScan:
             epics.caput(self.start_acq, 1)
 
             print(f"Decelerating and moving to position 0...")
-            self.move_epics_motor(0 + float(accel_d))
+            #self.move_epics_motor(0 + float(accel_d))
 
             print("Scan completed.")
             print(f"Saved data in {self.hdf_file}")
