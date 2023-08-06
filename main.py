@@ -234,8 +234,6 @@ def main(args):
 
     #continuous_scan.perform_continuous_scan()
 
-    number_of_tasks = 2
-    number_of_processes = 2
     position = Queue()
     #tasks_that_are_done = Queue()
     processes = []
