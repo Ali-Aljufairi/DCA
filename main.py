@@ -232,7 +232,7 @@ def main(args):
 
     )
 
-    continuous_scan.perform_continuous_scan()
+    #continuous_scan.perform_continuous_scan()
 
     number_of_tasks = 10
     number_of_processes = 2
