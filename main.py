@@ -192,12 +192,6 @@ class ContinuousScan:
 
         
 def main(args):
-    number_of_tasks = 10
-    number_of_processes = 2
-    tasks_to_accomplish = Queue()
-    tasks_that_are_done = Queue()
-    processes = []
-
     Config(args.config_file)
     continuous_scan = ContinuousScan(
         args.exposure_time,
@@ -220,20 +214,25 @@ def main(args):
         exposure_time_pv,
         frame_rate_pv,
         accelaration_time_pv
-
-
     )
+    continuous_scan.perform_continuous_scan()
+
+    number_of_tasks = 10
+    number_of_processes = 2
+    tasks_to_accomplish = Queue()
+    tasks_that_are_done = Queue()
+    processes = []
+
     for i in range(number_of_tasks):
         tasks_to_accomplish.put("Task no " + str(i))
 
     # creating processes
     for w in range(number_of_processes):
-        p = Process(target=continuous_scan.perform_continuous_scan(), args=(tasks_to_accomplish, tasks_that_are_done))
+        p = Process(target=continuous_scan, args=(tasks_to_accomplish, tasks_that_are_done))
         processes.append(p)
         p.start()
     
-    continuous_scan.perform_continuous_scan()
-    
+
     # completing process
     for p in processes:
         p.join()
