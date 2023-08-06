@@ -289,8 +289,8 @@ def main(args):
 
     with h5py.File(continuous_scan.hdf_file, "w") as f:
         root_group = f.create_group("scan_data")
-        continuous_scan.setup_hdf5_file()
         data_group = root_group.create_group("image_data")
+        continuous_scan.setup_hdf5_file(data_group)
 
         processes = []
         for i in range(args.num_clients):
