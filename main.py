@@ -4,7 +4,7 @@ import argparse
 import time
 import epics
 import zmq
-from multiprocessing import Lock, Process, Queue, current_process
+import multiprocessing
 from stepscan import StepScan
 from config import *
 
@@ -53,7 +53,6 @@ class ContinuousScan:
 
     def scan_worker(self, step, target_position):
         motor = epics.Motor(self.motion_stage_pv)
-
 
         # Move to the target position and wait for the motion to complete
         
@@ -165,6 +164,11 @@ class ContinuousScan:
         accel_d = self.calculate_accel_distance()
         print(f"accel_d: {accel_d}")
 
+        self.setup_hdf5_file()
+
+        # create a multiprocessing pool
+        pool = multiprocessing.Pool()
+
         # Perform the continuous scan
         print(f"Moving to position 0...")
         self.move_epics_motor(0 - int(accel_d))
@@ -176,10 +180,19 @@ class ContinuousScan:
         print("Acquiring data at steady speed...")
         epics.caput(self.start_acq, 1)
 
+        # create scan tasks and run them in parallel
+
+        tasks = [(step, step * self.step_size)
+                 for step in range(self.num_steps)]
+        pool.starmap(self.scan_worker, tasks)
+
         # Deceleration
         print(f"Decelerating and moving to position 0...")
         self.move_epics_motor(0 + int(accel_d))
 
+        # Close the multiprocessing pool
+        pool.close()
+        pool.join()
 
         print("Scan completed.")
         print(f"Saved data in {self.hdf_file}")
@@ -207,34 +220,22 @@ def main(args):
         image_data,
         exposure_time_pv,
         frame_rate_pv,
-        accelaration_time_pv
+        accelaration_time_pv,
+        enable_ndarray,
+        enable_ndarray_callbacks,
+        enable_ZMQ_Array,
+        enable_ZMQ_Callbacks,
+        zmq_port,
+        zmq_host
+
+
+
     )
+
     continuous_scan.perform_continuous_scan()
 
-    number_of_tasks = 10
-    number_of_processes = 2
-    tasks_to_accomplish = Queue()
-    tasks_that_are_done = Queue()
-    processes = []
-
-    for i in range(number_of_tasks):
-        tasks_to_accomplish.put("Task no " + str(i))
-
-    # creating processes
-    for w in range(number_of_processes):
-        p = Process(target=continuous_scan, args=(tasks_to_accomplish, tasks_that_are_done))
-        processes.append(p)
-        p.start()
-    
-
-    # completing process
-    for p in processes:
-        p.join()
-    
-    
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         description="Step Scan using FLIR camera and MICOS stage.")
     parser.add_argument("exposure_time", type=float,
