@@ -249,9 +249,6 @@ def main(args):
     p = Process(target=continuous_scan.perform_continuous_scan(), args=())
     processes.append(p)
     p.start()
-    p = Process(target=continuous_scan.move_epics_motor(),  args=(position))
-    processes.append(p)
-    p.start()
     # completing process
     for p in processes:
         p.join()
