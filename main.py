@@ -132,6 +132,20 @@ class ContinuousScan:
         epics.caput(self.trigger_source, 0)
         epics.caput(self.camera_acq_pv, 0)
 
+    def setup_hdf5_file(self, data_group):
+        # Add metadata to the root group
+        data_group.attrs["exposure_time"] = self.exposure_time
+        data_group.attrs["total_distance"] = self.total_distance
+        data_group.attrs["step_size"] = self.step_size
+        data_group.attrs["num_images"] = self.num_images
+        data_group.attrs["acq_mode"] = self.acq_mode
+        data_group.attrs["trigger_mode"] = self.trigger_mode
+        data_group.attrs["trigger_source"] = self.trigger_source
+
+        # Add image size metadata
+        data_group.attrs["image_size_x"] = self.image_size_x
+        data_group.attrs["image_size_y"] = self.image_size_y
+
     def perform_continuous_scan(self):
         # Connect to the motion stage and get the fps value and setup the camera
         self.setup_camera()
@@ -143,33 +157,27 @@ class ContinuousScan:
         accel_d = self.calculate_accel_distance()
         print(f"accel_d: {accel_d}, type: {type(accel_d)}")
 
-        self.setup_hdf5_file()
+        # Create or open an HDF5 file to store the data
+        with h5py.File(self.hdf_file, "w") as f:
+            root_group = f.create_group("scan_data")
+            data_group = root_group.create_group("image_data")
+            self.setup_hdf5_file(data_group)
 
-        print(f"Moving to position 0 - accel_d...")
-        self.move_epics_motor(0 - float(accel_d))
-        print("Starting the scan...")
-        print(f"Accelerating to steady speed...")
-        self.move_epics_motor(self.total_distance + float(accel_d))
+            print(f"Moving to position 0 - accel_d...")
+            self.move_epics_motor(0 - float(accel_d))
+            print("Starting the scan...")
+            print(f"Accelerating to steady speed...")
+            self.move_epics_motor(self.total_distance + float(accel_d))
 
-        # Steady speed
-        print("Acquiring data at steady speed...")
-        epics.caput(self.start_acq, 1)
+            # Steady speed
+            print("Acquiring data at steady speed...")
+            epics.caput(self.start_acq, 1)
 
-        print(f"Decelerating and moving to position 0...")
-        self.move_epics_motor(0 + float(accel_d))
+            print(f"Decelerating and moving to position 0...")
+            self.move_epics_motor(0 + float(accel_d))
 
-
-        print("Scan completed.")
-        print(f"Saved data in {self.hdf_file}")
-    def save_image_to_hdf5(self, data_group, step, target_position, data_chunk):
-        # Add metadata
-        data_group.attrs["distance"] = target_position
-        data_group.attrs["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
-
-        # Create dataset
-        img_dataset = data_group.create_dataset(
-            f"image_{step}", data=data_chunk)
-
+            print("Scan completed.")
+            print(f"Saved data in {self.hdf_file}")
 
 
 def reshape_and_save_image_chunk(data_chunk, chunk_idx, client_id, data_group, stepscan_obj):
@@ -196,6 +204,55 @@ def client_worker(client_id, stepscan_obj, data_group):
         reshape_and_save_image_chunk(data_chunk, chunk_idx, client_id, data_group, stepscan_obj)
 
     print(f"Client {client_id} received and reshaped data")
+
+
+def main(args):
+    Config(args.config_file)
+    continuous_scan = ContinuousScan(
+        args.exposure_time,
+        args.overall_distance,
+        args.step_size,
+        detector_pv,
+        motion_stage_pv,
+        camera_acq_pv,
+        image_size_x,
+        image_size_y,
+        image_counter,
+        num_images,
+        acq_mode,
+        start_acq,
+        acq_status,
+        trigger_mode,
+        trigger_source,
+        trigger_software,
+        image_data,
+        exposure_time_pv,
+        frame_rate_pv,
+        accelaration_time_pv,
+        enable_ndarray,
+        enable_ndarray_callbacks,
+        enable_ZMQ_Array,
+        enable_ZMQ_Callbacks,
+        zmq_port,
+        zmq_host)
+
+    continuous_scan.perform_continuous_scan()
+    print(f"Saved data in {continuous_scan.hdf_file}")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Step Scan using FLIR camera and MICOS stage.")
+    parser.add_argument("exposure_time", type=float,
+                        help="Exposure time for the FLIR camera.")
+    parser.add_argument("overall_distance", type=float,
+                        help="Overall distance to scan with the MICOS stage.")
+    parser.add_argument("step_size", type=float,
+                        help="Step size for each scan step.")
+    parser.add_argument("--config_file", default="config.json",
+                        help="JSON file containing PV names. (Default: config.json)")
+    args = parser.parse_args()
+    main(args)
 
 
 def main(args):
