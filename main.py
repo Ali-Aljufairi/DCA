@@ -4,7 +4,7 @@ import argparse
 import time
 import epics
 import zmq
-import multiprocessing
+from multiprocessing import Lock, Process, Queue, current_process
 from stepscan import StepScan
 from config import *
 
@@ -167,7 +167,7 @@ class ContinuousScan:
         self.setup_hdf5_file()
 
         # create a multiprocessing pool
-        pool = multiprocessing.Pool()
+        # pool = multiprocessing.Pool()
 
         # Perform the continuous scan
         print(f"Moving to position 0...")
@@ -182,17 +182,17 @@ class ContinuousScan:
 
         # create scan tasks and run them in parallel
 
-        tasks = [(step, step * self.step_size)
-                 for step in range(self.num_steps)]
-        pool.starmap(self.scan_worker, tasks)
+        # tasks = [(step, step * self.step_size)
+        #          for step in range(self.num_steps)]
+        # pool.starmap(self.scan_worker, tasks)
 
         # Deceleration
         print(f"Decelerating and moving to position 0...")
         self.move_epics_motor(0 + int(accel_d))
 
-        # Close the multiprocessing pool
-        pool.close()
-        pool.join()
+        # # Close the multiprocessing pool
+        # pool.close()
+        # pool.join()
 
         print("Scan completed.")
         print(f"Saved data in {self.hdf_file}")
@@ -233,6 +233,26 @@ def main(args):
     )
 
     continuous_scan.perform_continuous_scan()
+
+    number_of_tasks = 10
+    number_of_processes = 2
+    tasks_to_accomplish = Queue()
+    tasks_that_are_done = Queue()
+    processes = []
+
+    for i in range(number_of_tasks):
+        tasks_to_accomplish.put("Task no " + str(i))
+
+    # creating processes
+    for w in range(number_of_processes):
+        p = Process(target=continuous_scan, args=(tasks_to_accomplish, tasks_that_are_done))
+        processes.append(p)
+        p.start()
+    
+
+    # completing process
+    for p in processes:
+        p.join()
 
 
 if __name__ == "__main__":
