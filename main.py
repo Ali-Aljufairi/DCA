@@ -189,7 +189,7 @@ def reshape_and_save_image_chunk(data_chunk, chunk_idx, client_id, data_group, s
 def client_worker(client_id, stepscan_obj, data_group):
     context = zmq.Context()
     socket = context.socket(zmq.REQ)
-    socket.connect("tcp://localhost:5555")
+    socket.connect("tcp://localhost:12")
 
     socket.send_string("Send data")
     data = socket.recv()
