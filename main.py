@@ -162,7 +162,7 @@ class ContinuousScan:
         # Calculate the required parameters
         self.calculate_velocity(fps)
         accel_d = self.calculate_accel_distance()
-        print(f"accel_d: {accel_d}")
+        print (f"accel_d: {accel_d}, type: {type(accel_d)}")
 
         self.setup_hdf5_file()
 
