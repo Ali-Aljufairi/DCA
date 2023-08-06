@@ -55,7 +55,6 @@ class ContinuousScan:
         motor = epics.Motor(self.motion_stage_pv)
 
         # Move to the target position and wait for the motion to complete
-        
         self.move_epics_motor(target_position)
 
         # Notify that the image is ready for acquisition
@@ -226,11 +225,7 @@ def main(args):
         enable_ZMQ_Array,
         enable_ZMQ_Callbacks,
         zmq_port,
-        zmq_host
-
-
-
-    )
+        zmq_host)
 
     #continuous_scan.perform_continuous_scan()
 
