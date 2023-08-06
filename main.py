@@ -217,25 +217,25 @@ def main(args):
     )
     continuous_scan.perform_continuous_scan()
 
-    number_of_tasks = 10
-    number_of_processes = 2
-    tasks_to_accomplish = Queue()
-    tasks_that_are_done = Queue()
-    processes = []
+    # number_of_tasks = 10
+    # number_of_processes = 2
+    # tasks_to_accomplish = Queue()
+    # tasks_that_are_done = Queue()
+    # processes = []
 
-    for i in range(number_of_tasks):
-        tasks_to_accomplish.put("Task no " + str(i))
+    # for i in range(number_of_tasks):
+    #     tasks_to_accomplish.put("Task no " + str(i))
 
-    # creating processes
-    for w in range(number_of_processes):
-        p = Process(target=continuous_scan, args=(tasks_to_accomplish, tasks_that_are_done))
-        processes.append(p)
-        p.start()
+    # # creating processes
+    # for w in range(number_of_processes):
+    #     p = Process(target=continuous_scan, args=(tasks_to_accomplish, tasks_that_are_done))
+    #     processes.append(p)
+    #     p.start()
     
 
-    # completing process
-    for p in processes:
-        p.join()
+    # # completing process
+    # for p in processes:
+    #     p.join()
     
     
 
