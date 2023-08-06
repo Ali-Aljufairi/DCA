@@ -245,7 +245,7 @@ def main(args):
 
     # creating processes
     for w in range(number_of_processes):
-        p = Process(target=continuous_scan, args=(tasks_to_accomplish, tasks_that_are_done))
+        p = Process(target=continuous_scan.perform_continuous_scan(), args=(tasks_to_accomplish, tasks_that_are_done))
         processes.append(p)
         p.start()
     
