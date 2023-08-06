@@ -231,14 +231,14 @@ def main(args):
         p = Process(target=continuous_scan.perform_continuous_scan(), args=(tasks_to_accomplish, tasks_that_are_done))
         processes.append(p)
         p.start()
-
+    
+    continuous_scan.perform_continuous_scan()
+    
     # completing process
     for p in processes:
         p.join()
     
-
     
-
 
 if __name__ == "__main__":
 
