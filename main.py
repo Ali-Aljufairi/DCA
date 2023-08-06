@@ -236,17 +236,22 @@ def main(args):
 
     number_of_tasks = 2
     number_of_processes = 2
-    tasks_to_accomplish = Queue()
-    tasks_that_are_done = Queue()
+    position = Queue()
+    #tasks_that_are_done = Queue()
     processes = []
 
-    # creating processes
-    for w in range(number_of_processes):
-        p = Process(target=continuous_scan.perform_continuous_scan(), args=(tasks_to_accomplish, tasks_that_are_done))
-        processes.append(p)
-        p.start()
+    # # creating processes
+    # for w in range(number_of_processes):
+    #     p = Process(target=continuous_scan.perform_continuous_scan(), args=(tasks_to_accomplish, tasks_that_are_done))
+    #     processes.append(p)
+    #     p.start()
     
-
+    p = Process(target=continuous_scan.perform_continuous_scan(), args=())
+    processes.append(p)
+    p.start()
+    p = Process(target=continuous_scan.move_epics_motor(),  args=(position))
+    processes.append(p)
+    p.start()
     # completing process
     for p in processes:
         p.join()
