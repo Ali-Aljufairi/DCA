@@ -320,7 +320,7 @@ def main(args):
     continuous_scan.setup_camera()
 
 
-    continuous_scan.perform_continuous_scan()
+    continuous_scan.perform_continuous_scan(1234, "localhost")
 
 
 if __name__ == "__main__":
