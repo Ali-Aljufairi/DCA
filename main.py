@@ -250,7 +250,7 @@ def main(args):
         continuous_scan.setup_hdf5_file(data_group)
 
         processes = []
-        for i in range(args.num_clients):
+        for i in range(2):
             process = multiprocessing.Process(target=continuous_scan.client_worker, args=(i, continuous_scan, data_group))
             processes.append(process)
             process.start()
