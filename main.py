@@ -259,7 +259,7 @@ if __name__ == "__main__":
         continuous_scan.setup_hdf5_file(data_group)
 
         # Start the reshape process with synchronization event
-        reshape_process = multiprocessing.Process(target=client_worker, args=(0, args.num_images, continuous_scan, data_group, sync_event))
+        reshape_process = multiprocessing.Process(target=client_worker, args=(0, 50, continuous_scan, data_group, sync_event))
         reshape_process.start()
 
         # Perform the continuous scan
