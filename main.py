@@ -45,11 +45,9 @@ class ContinuousScan:
         self.enable_ZMQ_Array = epics.caput(enable_ZMQ_Array, 1)
         self.enable_ZMQ_callbacks = epics.caput(enable_ZMQ_callbacks, 1)
         self.num_images = int(np.ceil(self.total_distance / self.step_size))
-        self.zmq_port = 1234
-        self.zmq_host = "127.0.0.1"
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.PULL)
-        self.socket.bind(f"tcp://127.0.0.1:1234")
+        self.socket.bind(f"tcp://*:1234")
         self.queue = multiprocessing.Queue()
 
     def receive_data_via_zmq(self):
