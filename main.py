@@ -269,3 +269,4 @@ if __name__ == "__main__":
     parser.add_argument("--config_file", default="config.json",
                         help="JSON file containing PV names. (Default: config.json)")
     args = parser.parse_args()
+    main(args)
