@@ -156,26 +156,22 @@ class ContinuousScan:
         accel_d = self.calculate_accel_distance()
         print(f"accel_d: {accel_d}, type: {type(accel_d)}")
 
-        # Create or open an HDF5 file to store the data
-        with h5py.File(self.hdf_file, "w") as f:
-            root_group = f.create_group("scan_data")
-            data_group = root_group.create_group("image_data")
-            self.setup_hdf5_file(data_group)
+       
 
-            print(f"Moving to position 0 - accel_d...")
-            self.move_epics_motor(0 - float(accel_d))
-            print("Starting the scan...")
-            print(f"Accelerating to steady speed...")
-            self.move_epics_motor(self.total_distance + float(accel_d))
+        print(f"Moving to position 0 - accel_d...")
+        self.move_epics_motor(0 - float(accel_d))
+        print("Starting the scan...")
+        print(f"Accelerating to steady speed...")
+        self.move_epics_motor(self.total_distance + float(accel_d))
 
             # Steady speed
-            print("Acquiring data at steady speed...")
+        print("Acquiring data at steady speed...")
 
             # Call the start_processes function to handle ZeroMQ communication and data acquisition
-            self.start_processes(zmq_port, zmq_host)
+        self.start_processes(zmq_port, zmq_host)
 
-            print("Scan completed.")
-            print(f"Saved data in {self.hdf_file}")
+        print("Scan completed.")
+        print(f"Saved data in {self.hdf_file}")
 
     def reshape_and_save_image_chunk(self, data_chunk, chunk_idx, stepscan_obj):
         data = np.frombuffer(data_chunk, dtype=np.uint8)
@@ -236,6 +232,7 @@ class ContinuousScan:
         zmq_process.join()
         reshape_process.join()
 
+
     def receive_zmq_data(self, zmq_port, zmq_host, chunk_queue):
         context = zmq.Context()
         socket = context.socket(zmq.PULL)
@@ -248,42 +245,42 @@ class ContinuousScan:
             chunk_queue.put(data_chunk)
 
     def receive_data(self, data, chunk_queue):
-        chunk_size = self.image_size_x * self.image_size_y
-        num_chunks = len(data) // chunk_size
+            chunk_size = self.image_size_x * self.image_size_y
+            num_chunks = len(data) // chunk_size
 
-        for i in range(num_chunks):
-            start = i * chunk_size
-            end = start + chunk_size
-            chunk = data[start:end]
-            chunk_queue.put(chunk)
+            for i in range(num_chunks):
+                start = i * chunk_size
+                end = start + chunk_size
+                chunk = data[start:end]
+                chunk_queue.put(chunk)
 
     def reshape_and_save(self, chunk_queue):
 
-        with h5py.File(self.hdf_file, "w") as f:
-            data_group = f.create_group("image_data")
+            with h5py.File(self.hdf_file, "w") as f:
+                data_group = f.create_group("image_data")
 
-            chunk_idx = 0
-            while True:
-                chunk = chunk_queue.get()
-                if chunk is None:
-                    break
+                chunk_idx = 0
+                while True:
+                    chunk = chunk_queue.get()
+                    if chunk is None:
+                        break
 
-                data = np.frombuffer(chunk, dtype=np.uint8)
-                data = data.reshape((self.image_size_y, self.image_size_x))
+                    data = np.frombuffer(chunk, dtype=np.uint8)
+                    data = data.reshape((self.image_size_y, self.image_size_x))
 
-                # Save to HDF5
-                img_dataset = data_group.create_dataset(
-                    f"image_{chunk_idx}", data=data)
+                    # Save to HDF5
+                    img_dataset = data_group.create_dataset(
+                        f"image_{chunk_idx}", data=data)
 
-                img_dataset.attrs["distance"] = self.motion_stage.position
-                img_dataset.attrs["timestamp"] = time.strftime(
-                    "%Y-%m-%d %H:%M:%S")
+                    img_dataset.attrs["distance"] = self.motion_stage.position
+                    img_dataset.attrs["timestamp"] = time.strftime(
+                        "%Y-%m-%d %H:%M:%S")
 
-                print(f"Reshaped and saved chunk {chunk_idx}")
+                    print(f"Reshaped and saved chunk {chunk_idx}")
 
-                chunk_idx += 1
+                    chunk_idx += 1
 
-            chunk_queue.put(None)  # Signal complete
+                chunk_queue.put(None)  # Signal complete
 
 
 def main(args):
@@ -317,6 +314,7 @@ def main(args):
         zmq_host)
 
     continuous_scan.setup_camera()
+
 
     continuous_scan.perform_continuous_scan(1234, "localhost")
 
