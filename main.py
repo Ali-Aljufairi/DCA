@@ -135,8 +135,27 @@ class ContinuousScan:
         # Steady speed
         print("Acquiring data at steady speed...")
 
-        # Call the start_processes function to handle ZeroMQ communication and data acquisition
-        self.start_processes(zmq_port, zmq_host)
+        # write function to get the data from the ZMQ socket
+        #
+        #
+        #
+        def get_data_from_zmq_socket():
+            context = zmq.Context()
+            socket = context.socket(zmq.PULL)
+            socket.connect(f"tcp://127.0.01:1234")
+            received_data = socket.recv()
+            return received_data
+        received_data = get_data_from_zmq_socket
+        print(f"Received data: {received_data}")
+
+        data_group = self.setup_hdf5_file()
+
+        # Reshape and save the received data
+        image_data = np.array(received_data, dtype=np.uint8).reshape(
+            self.image_size_y, self.image_size_x)
+
+        self.save_image_to_hdf5(
+            data_group, 0, self.motion_stage.position, image_data)
 
         print("Scan completed.")
         print(f"Saved data in {self.hdf_file}")
