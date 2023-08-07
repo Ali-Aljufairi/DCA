@@ -127,7 +127,7 @@ class ContinuousScan:
         img_dataset.attrs["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
 
     def setup_camera(self):
-        epics.caput(self.exposure_time_pv, self.exposure_time)
+        epics.caput(self.exposure_time_pv,0.1)
         epics.caput(self.acq_mode, 1)
         epics.caput(self.trigger_mode, 0)
         epics.caput(self.trigger_source, 0)
