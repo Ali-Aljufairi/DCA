@@ -115,7 +115,6 @@ class ContinuousScan:
         epics.caput(self.trigger_source, 0)
         epics.caput(self.camera_acq_pv, 0)
 
-
     def perform_continuous_scan(self, zmq_port, zmq_host):
         # Connect to the motion stage and get the fps value and setup the camera
         self.setup_camera()
@@ -127,18 +126,16 @@ class ContinuousScan:
         accel_d = self.calculate_accel_distance()
         print(f"accel_d: {accel_d}, type: {type(accel_d)}")
 
-       
-
         print(f"Moving to position 0 - accel_d...")
         self.move_epics_motor(0 - float(accel_d))
         print("Starting the scan...")
         print(f"Accelerating to steady speed...")
         self.move_epics_motor(self.total_distance + float(accel_d))
 
-            # Steady speed
+        # Steady speed
         print("Acquiring data at steady speed...")
 
-            # Call the start_processes function to handle ZeroMQ communication and data acquisition
+        # Call the start_processes function to handle ZeroMQ communication and data acquisition
         self.start_processes(zmq_port, zmq_host)
 
         print("Scan completed.")
@@ -203,7 +200,6 @@ class ContinuousScan:
         zmq_process.join()
         reshape_process.join()
 
-
     def receive_zmq_data(self, zmq_port, zmq_host, chunk_queue):
         context = zmq.Context()
         socket = context.socket(zmq.PULL)
@@ -216,16 +212,16 @@ class ContinuousScan:
             chunk_queue.put(data_chunk)
 
     def receive_data(self, data, chunk_queue):
-            chunk_size = self.image_size_x * self.image_size_y
-            num_chunks = len(data) // chunk_size
+        chunk_size = self.image_size_x * self.image_size_y
+        num_chunks = len(data) // chunk_size
 
-            for i in range(num_chunks):
-                start = i * chunk_size
-                end = start + chunk_size
-                chunk = data[start:end]
-                chunk_queue.put(chunk)
+        for i in range(num_chunks):
+            start = i * chunk_size
+            end = start + chunk_size
+            chunk = data[start:end]
+            chunk_queue.put(chunk)
 
-    def reshape_and_save(self, chunk_queue, data_group):
+    def reshape_and_save(self, chunk_queue, stepscan_obj):
         chunk_idx = 0
         while True:
             chunk = chunk_queue.get()
@@ -233,15 +229,18 @@ class ContinuousScan:
                 break
 
             data = np.frombuffer(chunk, dtype=np.uint8)
-            image_data = data.reshape((self.config.image_size_y, self.config.image_size_x))
+            image_data = data.reshape(
+                (stepscan_obj.image_size_y, stepscan_obj.image_size_x))
 
-            with data_group.get_lock():
-                self.save_image_to_hdf5(data_group, chunk_idx, self.motion_stage.position, image_data)
+            with stepscan_obj.data_group.get_lock():
+                stepscan_obj.save_image_to_hdf5(
+                    stepscan_obj.data_group, chunk_idx, stepscan_obj.motion_stage.position, image_data)
 
             print(f"Reshaped and saved chunk {chunk_idx}")
             chunk_idx += 1
 
         chunk_queue.put(None)  # Signal complete
+
 
 def main(args):
     Config(args.config_file)
@@ -274,7 +273,6 @@ def main(args):
         zmq_host)
 
     continuous_scan.setup_camera()
-
 
     continuous_scan.perform_continuous_scan(1234, "localhost")
 
