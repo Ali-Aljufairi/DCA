@@ -98,9 +98,6 @@ class ContinuousScan:
 
 
 
-        data_group = self.setup_hdf5_file()
-
-
 
 
 
