@@ -258,8 +258,9 @@ def main(args):
         for process in processes:
             process.join()
 
-        continuous_scan.perform_continuous_scan()
-        print(f"Saved data in {continuous_scan.hdf_file}")
+    continuous_scan.perform_continuous_scan()
+    print(f"Saved data in {continuous_scan.hdf_file}")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Step Scan using FLIR camera and MICOS stage.")
