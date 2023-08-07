@@ -10,7 +10,7 @@ from config import *
 
 
 class ContinuousScan:
-    def __init__(self, exposure_time, total_distance, step_size, detector_pv, motion_stage_pv, camera_acq_pv, image_size_x, image_size_y, image_counter, num_images, acq_mode, start_acq, acq_status, trigger_mode, trigger_source, trigger_software, image_data, exposure_time_pv, frame_rate_pv, accelaration_time_pv, enable_ndarray, enable_ndarray_callbacks, enable_ZMQ_Array, enable_ZMQ_callbacks, zmq_port, zmq_host):
+    def __init__(self, exposure_time, total_distance, step_size, detector_pv, motion_stage_pv, camera_acq_pv, image_size_x, image_size_y, image_counter, num_images, acq_mode, start_acq, acq_status, trigger_mode, trigger_source, trigger_software, image_data, exposure_time_pv, frame_rate_pv, accelaration_time_pv, enable_ndarray, enable_ndarray_callbacks, enable_ZMQ_Array, enable_ZMQ_callbacks, zmq_port, zmq_host,num_images):
         self.exposure_time = exposure_time
         self.total_distance = total_distance
         self.step_size = step_size
@@ -44,6 +44,7 @@ class ContinuousScan:
             enable_ndarray_callbacks, 1)
         self.enable_ZMQ_Array = epics.caput(enable_ZMQ_Array, 1)
         self.enable_ZMQ_callbacks = epics.caput(enable_ZMQ_callbacks, 1)
+        self.num_images =int(np.ceil(self.total_distance / self.step_size))
 
 
    
@@ -249,7 +250,8 @@ if __name__ == "__main__":
         enable_ZMQ_Array,
         enable_ZMQ_Callbacks,
         zmq_port,
-        zmq_host)
+        zmq_host,
+        num_images)
 
     # Create or open an HDF5 file to store the data
     with h5py.File(continuous_scan.hdf_file, "w") as f:
