@@ -173,26 +173,30 @@ class ContinuousScan:
             print("Acquiring data at steady speed...")
             epics.caput(self.start_acq, 1)
 
-            print(f"Decelerating and moving to position 0...")
-            #self.move_epics_motor(0 + float(accel_d))
 
             print("Scan completed.")
             print(f"Saved data in {self.hdf_file}")
 
 
-def reshape_and_save_image_chunk(data_chunk, chunk_idx, client_id, data_group, stepscan_obj):
+def reshape_and_save_image_chunk(data_chunk, chunk_idx, stepscan_obj):
     data = np.frombuffer(data_chunk, dtype=np.uint8)
     data = data.reshape((stepscan_obj.image_size_y, stepscan_obj.image_size_x))
-    stepscan_obj.save_image_to_hdf5(data_group, chunk_idx, stepscan_obj.motion_stage.position, data_chunk)
+    return data
 
+def reshape_and_save_worker(client_id, data_chunk, chunk_idx, stepscan_obj, data_group):
+    reshaped_data = reshape_and_save_image_chunk(data_chunk, chunk_idx, stepscan_obj)
+    with data_group.get_lock():
+        stepscan_obj.save_image_to_hdf5(data_group, chunk_idx, stepscan_obj.motion_stage.position, reshaped_data)
+    print(f"Client {client_id} reshaped and saved data for chunk {chunk_idx}")
 
-def client_worker(client_id, stepscan_obj, data_group):
+def client_worker(client_id, data_chunks, stepscan_obj, data_group):
     context = zmq.Context()
     socket = context.socket(zmq.REQ)
-    socket.connect("tcp://localhost:12")
-
-    socket.send_string("Send data")
+    socket.connect("tcp://localhost:1234")
     data = socket.recv()
+    # save the data to txt file
+    with open(f"client_{client_id}.txt", "wb") as f:
+        f.write(data)
 
     chunk_size = stepscan_obj.image_size_x * stepscan_obj.image_size_y
     num_chunks = len(data) // chunk_size
@@ -201,10 +205,9 @@ def client_worker(client_id, stepscan_obj, data_group):
         chunk_start = chunk_idx * chunk_size
         chunk_end = chunk_start + chunk_size
         data_chunk = data[chunk_start:chunk_end]
-        reshape_and_save_image_chunk(data_chunk, chunk_idx, client_id, data_group, stepscan_obj)
+        reshape_and_save_worker(client_id, data_chunk, chunk_idx, stepscan_obj, data_group)
 
-    print(f"Client {client_id} received and reshaped data")
-
+    print(f"Client {client_id} completed reshaping and saving data")
 
 def main(args):
     Config(args.config_file)
@@ -236,9 +239,18 @@ def main(args):
         zmq_port,
         zmq_host)
 
-    continuous_scan.perform_continuous_scan()
-    print(f"Saved data in {continuous_scan.hdf_file}")
+    # Create or open an HDF5 file to store the data
+    with h5py.File(continuous_scan.hdf_file, "w") as f:
+        root_group = f.create_group("scan_data")
+        data_group = root_group.create_group("image_data")
+        continuous_scan.setup_hdf5_file(data_group)
 
+        reshape_process = multiprocessing.Process(target=client_worker, args=(0, continuous_scan.num_images, continuous_scan, data_group))
+        reshape_process.start()
+
+        reshape_process.join()
+
+    print(f"Saved data in {continuous_scan.hdf_file}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -253,5 +265,3 @@ if __name__ == "__main__":
                         help="JSON file containing PV names. (Default: config.json)")
     args = parser.parse_args()
     main(args)
-
-
