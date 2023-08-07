@@ -102,26 +102,10 @@ class ContinuousScan:
 
         print(f"Motor moved to position: {position}")
 
-    def save_image_to_hdf5(self, data_group, step, target_position):
-        # Wait for the image counter to change, indicating a new image has been acquired
-        initial_counter = epics.caget(self.image_counter)
-
-        while True:
-            current_counter = epics.caget(self.image_counter)
-            if current_counter != initial_counter:
-                print(f"Image acquired with counter {current_counter}")
-                break
-
-        # Retrieve the image data
-        image_data = epics.caget(self.image_data)
-        image_data = np.reshape(
-            image_data, (self.image_size_y, self.image_size_x))
-
-        # Create dataset
-        img_dataset = data_group.create_dataset(
-            f"image_{step}", data=image_data)
-
-        # Add metadata
+    def save_image_to_hdf5(self, data_group, step, target_position, image_data):
+        dataset_name = f"image_{step}"
+        data_group.create_dataset(dataset_name, data=image_data)
+        img_dataset = data_group[dataset_name]
         img_dataset.attrs["distance"] = target_position
         img_dataset.attrs["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -131,19 +115,6 @@ class ContinuousScan:
         epics.caput(self.trigger_source, 0)
         epics.caput(self.camera_acq_pv, 0)
 
-    def setup_hdf5_file(self, data_group):
-        # Add metadata to the root group
-        data_group.attrs["exposure_time"] = self.exposure_time
-        data_group.attrs["total_distance"] = self.total_distance
-        data_group.attrs["step_size"] = self.step_size
-        data_group.attrs["num_images"] = self.num_images
-        data_group.attrs["acq_mode"] = self.acq_mode
-        data_group.attrs["trigger_mode"] = self.trigger_mode
-        data_group.attrs["trigger_source"] = self.trigger_source
-
-        # Add image size metadata
-        data_group.attrs["image_size_x"] = self.image_size_x
-        data_group.attrs["image_size_y"] = self.image_size_y
 
     def perform_continuous_scan(self, zmq_port, zmq_host):
         # Connect to the motion stage and get the fps value and setup the camera
@@ -254,34 +225,23 @@ class ContinuousScan:
                 chunk = data[start:end]
                 chunk_queue.put(chunk)
 
-    def reshape_and_save(self, chunk_queue):
+    def reshape_and_save(self, chunk_queue, data_group):
+        chunk_idx = 0
+        while True:
+            chunk = chunk_queue.get()
+            if chunk is None:
+                break
 
-            with h5py.File(self.hdf_file, "w") as f:
-                data_group = f.create_group("image_data")
+            data = np.frombuffer(chunk, dtype=np.uint8)
+            image_data = data.reshape((self.config.image_size_y, self.config.image_size_x))
 
-                chunk_idx = 0
-                while True:
-                    chunk = chunk_queue.get()
-                    if chunk is None:
-                        break
+            with data_group.get_lock():
+                self.save_image_to_hdf5(data_group, chunk_idx, self.motion_stage.position, image_data)
 
-                    data = np.frombuffer(chunk, dtype=np.uint8)
-                    data = data.reshape((self.image_size_y, self.image_size_x))
+            print(f"Reshaped and saved chunk {chunk_idx}")
+            chunk_idx += 1
 
-                    # Save to HDF5
-                    img_dataset = data_group.create_dataset(
-                        f"image_{chunk_idx}", data=data)
-
-                    img_dataset.attrs["distance"] = self.motion_stage.position
-                    img_dataset.attrs["timestamp"] = time.strftime(
-                        "%Y-%m-%d %H:%M:%S")
-
-                    print(f"Reshaped and saved chunk {chunk_idx}")
-
-                    chunk_idx += 1
-
-                chunk_queue.put(None)  # Signal complete
-
+        chunk_queue.put(None)  # Signal complete
 
 def main(args):
     Config(args.config_file)
