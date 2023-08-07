@@ -127,7 +127,7 @@ class ContinuousScan:
 
     def setup_camera(self):
         epics.caput(self.exposure_time_pv, self.exposure_time)
-        epics.caput(self.acq_mode, 2)
+        epics.caput(self.acq_mode, 1)
         epics.caput(self.trigger_mode, 0)
         epics.caput(self.trigger_source, 0)
         epics.caput(self.camera_acq_pv, 0)
@@ -189,14 +189,15 @@ def reshape_and_save_worker(client_id, data_chunk, chunk_idx, stepscan_obj, data
         stepscan_obj.save_image_to_hdf5(data_group, chunk_idx, stepscan_obj.motion_stage.position, reshaped_data)
     print(f"Client {client_id} reshaped and saved data for chunk {chunk_idx}")
 
-def client_worker(client_id, data_chunks, stepscan_obj, data_group):
+def client_worker(client_id, data_chunks, stepscan_obj, data_group, sync_event):
     context = zmq.Context()
     socket = context.socket(zmq.REQ)
     socket.connect("tcp://localhost:1234")
+
+    sync_event.wait()  # Wait for the synchronization event from the server
+    sync_event.clear()  # Clear the event for future synchronization
+
     data = socket.recv()
-    # save the data to txt file
-    with open(f"client_{client_id}.txt", "wb") as f:
-        f.write(data)
 
     chunk_size = stepscan_obj.image_size_x * stepscan_obj.image_size_y
     num_chunks = len(data) // chunk_size
@@ -207,10 +208,21 @@ def client_worker(client_id, data_chunks, stepscan_obj, data_group):
         data_chunk = data[chunk_start:chunk_end]
         reshape_and_save_worker(client_id, data_chunk, chunk_idx, stepscan_obj, data_group)
 
-    print(f"Client {client_id} completed reshaping and saving data")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Step Scan using FLIR camera and MICOS stage.")
+    parser.add_argument("exposure_time", type=float,
+                        help="Exposure time for the FLIR camera.")
+    parser.add_argument("overall_distance", type=float,
+                        help="Overall distance to scan with the MICOS stage.")
+    parser.add_argument("step_size", type=float,
+                        help="Step size for each scan step.")
+    parser.add_argument("--config_file", default="config.json",
+                        help="JSON file containing PV names. (Default: config.json)")
+    args = parser.parse_args()
 
-def main(args):
-    Config(args.config_file)
+    sync_event = multiprocessing.Event()
+
     continuous_scan = ContinuousScan(
         args.exposure_time,
         args.overall_distance,
@@ -245,23 +257,14 @@ def main(args):
         data_group = root_group.create_group("image_data")
         continuous_scan.setup_hdf5_file(data_group)
 
-        reshape_process = multiprocessing.Process(target=client_worker, args=(0, continuous_scan.num_images, continuous_scan, data_group))
+        # Start the reshape process with synchronization event
+        reshape_process = multiprocessing.Process(target=client_worker, args=(0, args.num_images, continuous_scan, data_group, sync_event))
         reshape_process.start()
 
+        # Perform the continuous scan
+        continuous_scan.perform_continuous_scan()
+
+        sync_event.set()  # Set the synchronization event to signal the reshape process to continue
         reshape_process.join()
 
     print(f"Saved data in {continuous_scan.hdf_file}")
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Step Scan using FLIR camera and MICOS stage.")
-    parser.add_argument("exposure_time", type=float,
-                        help="Exposure time for the FLIR camera.")
-    parser.add_argument("overall_distance", type=float,
-                        help="Overall distance to scan with the MICOS stage.")
-    parser.add_argument("step_size", type=float,
-                        help="Step size for each scan step.")
-    parser.add_argument("--config_file", default="config.json",
-                        help="JSON file containing PV names. (Default: config.json)")
-    args = parser.parse_args()
-    main(args)
