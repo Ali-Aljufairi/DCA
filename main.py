@@ -4,13 +4,13 @@ import argparse
 import time
 import epics
 import zmq
-import multiprocessing 
+import multiprocessing
 from stepscan import StepScan
 from config import *
 
 
 class ContinuousScan:
-    def __init__(self, exposure_time, total_distance, step_size, detector_pv, motion_stage_pv, camera_acq_pv, image_size_x, image_size_y, image_counter,  acq_mode, start_acq, acq_status, trigger_mode, trigger_source, trigger_software, image_data, exposure_time_pv, frame_rate_pv, accelaration_time_pv, enable_ndarray, enable_ndarray_callbacks, enable_ZMQ_Array, enable_ZMQ_callbacks, zmq_port, zmq_host,num_images):
+    def __init__(self, exposure_time, total_distance, step_size, detector_pv, motion_stage_pv, camera_acq_pv, image_size_x, image_size_y, image_counter,  acq_mode, start_acq, acq_status, trigger_mode, trigger_source, trigger_software, image_data, exposure_time_pv, frame_rate_pv, accelaration_time_pv, enable_ndarray, enable_ndarray_callbacks, enable_ZMQ_Array, enable_ZMQ_callbacks, zmq_port, zmq_host, num_images):
         self.exposure_time = exposure_time
         self.total_distance = total_distance
         self.step_size = step_size
@@ -44,10 +44,9 @@ class ContinuousScan:
             enable_ndarray_callbacks, 1)
         self.enable_ZMQ_Array = epics.caput(enable_ZMQ_Array, 1)
         self.enable_ZMQ_callbacks = epics.caput(enable_ZMQ_callbacks, 1)
-        self.num_images =int(np.ceil(self.total_distance / self.step_size))
-
-
-   
+        self.num_images = int(np.ceil(self.total_distance / self.step_size))
+        self.zmq_port = 1234
+        self.zmq_host = "localhost"
 
     def setup_hdf5_file(self):
         # Create or open an HDF5 file to store the data
@@ -146,7 +145,7 @@ class ContinuousScan:
         data_group.attrs["image_size_x"] = self.image_size_x
         data_group.attrs["image_size_y"] = self.image_size_y
 
-    def perform_continuous_scan(self):
+    def perform_continuous_scan(self, zmq_port, zmq_host):
         # Connect to the motion stage and get the fps value and setup the camera
         self.setup_camera()
         self.motion_stage = epics.Motor(self.motion_stage_pv)
@@ -171,25 +170,29 @@ class ContinuousScan:
 
             # Steady speed
             print("Acquiring data at steady speed...")
-            epics.caput(self.start_acq, 1)
 
+            # Call the start_processes function to handle ZeroMQ communication and data acquisition
+            self.start_processes(zmq_port, zmq_host)
 
             print("Scan completed.")
             print(f"Saved data in {self.hdf_file}")
 
-
-    def reshape_and_save_image_chunk(self,data_chunk, chunk_idx, stepscan_obj):
+    def reshape_and_save_image_chunk(self, data_chunk, chunk_idx, stepscan_obj):
         data = np.frombuffer(data_chunk, dtype=np.uint8)
-        data = data.reshape((stepscan_obj.image_size_y, stepscan_obj.image_size_x))
+        data = data.reshape(
+            (stepscan_obj.image_size_y, stepscan_obj.image_size_x))
         return data
 
-    def reshape_and_save_worker(self,client_id, data_chunk, chunk_idx, stepscan_obj, data_group):
-        reshaped_data = self.reshape_and_save_image_chunk(data_chunk, chunk_idx, stepscan_obj)
+    def reshape_and_save_worker(self, client_id, data_chunk, chunk_idx, stepscan_obj, data_group):
+        reshaped_data = self.reshape_and_save_image_chunk(
+            data_chunk, chunk_idx, stepscan_obj)
         with data_group.get_lock():
-            stepscan_obj.save_image_to_hdf5(data_group, chunk_idx, stepscan_obj.motion_stage.position, reshaped_data)
-        print(f"Client {client_id} reshaped and saved data for chunk {chunk_idx}")
+            stepscan_obj.save_image_to_hdf5(
+                data_group, chunk_idx, stepscan_obj.motion_stage.position, reshaped_data)
+        print(
+            f"Client {client_id} reshaped and saved data for chunk {chunk_idx}")
 
-    def client_worker(self,client_id, data_chunks, stepscan_obj, data_group, sync_event):
+    def client_worker(self, client_id, data_chunks, stepscan_obj, data_group, sync_event):
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
         socket.connect("tcp://localhost:1234")
@@ -198,20 +201,92 @@ class ContinuousScan:
         sync_event.clear()  # Clear the event for future synchronization
 
         data = socket.recv()
-        
+
         # write data to txt file for debugging
         with open(f"client_{client_id}.txt", "wb") as f:
             f.write(data)
 
         chunk_size = stepscan_obj.image_size_x * stepscan_obj.image_size_y
-        num_chunks =  2448*2048// chunk_size
+        num_chunks = 2448*2048 // chunk_size
 
         for chunk_idx in range(num_chunks):
             chunk_start = chunk_idx * chunk_size
             chunk_end = chunk_start + chunk_size
             data_chunk = data[chunk_start:chunk_end]
-            self.reshape_and_save_worker(client_id, data_chunk, chunk_idx, stepscan_obj, data_group)
-            
+            self.reshape_and_save_worker(
+                client_id, data_chunk, chunk_idx, stepscan_obj, data_group)
+
+    # function to get the zmq data from the server after image acquisition to be passe to start_processes
+
+    def start_processes(self, zmq_port, zmq_host):
+        # Create a Queue to hold the data chunks
+        chunk_queue = multiprocessing.Queue()
+
+        # Start process to receive data from ZMQ and put in queue
+        zmq_process = multiprocessing.Process(
+            target=self.receive_zmq_data, args=(zmq_port, zmq_host, chunk_queue))
+        zmq_process.start()
+
+        # Start process to take chunks from queue and reshape/save
+        reshape_process = multiprocessing.Process(
+            target=self.reshape_and_save, args=(chunk_queue,))
+        reshape_process.start()
+
+        # Join processes to wait for completion
+        zmq_process.join()
+        reshape_process.join()
+
+
+    def receive_zmq_data(self, zmq_port, zmq_host, chunk_queue):
+        context = zmq.Context()
+        socket = context.socket(zmq.PULL)
+        socket.connect(f"tcp://{zmq_host}:{zmq_port}")
+
+        while True:
+            data_chunk = socket.recv()
+            if data_chunk == b"EOF":  # Assuming EOF indicates end of data
+                break
+            chunk_queue.put(data_chunk)
+
+        def receive_data(self, data, chunk_queue):
+            chunk_size = self.image_size_x * self.image_size_y
+            num_chunks = len(data) // chunk_size
+
+            for i in range(num_chunks):
+                start = i * chunk_size
+                end = start + chunk_size
+                chunk = data[start:end]
+                chunk_queue.put(chunk)
+
+        def reshape_and_save(self, chunk_queue):
+
+            with h5py.File(self.hdf_file, "w") as f:
+                data_group = f.create_group("image_data")
+
+                chunk_idx = 0
+                while True:
+                    chunk = chunk_queue.get()
+                    if chunk is None:
+                        break
+
+                    data = np.frombuffer(chunk, dtype=np.uint8)
+                    data = data.reshape((self.image_size_y, self.image_size_x))
+
+                    # Save to HDF5
+                    img_dataset = data_group.create_dataset(
+                        f"image_{chunk_idx}", data=data)
+
+                    img_dataset.attrs["distance"] = self.motion_stage.position
+                    img_dataset.attrs["timestamp"] = time.strftime(
+                        "%Y-%m-%d %H:%M:%S")
+
+                    print(f"Reshaped and saved chunk {chunk_idx}")
+
+                    chunk_idx += 1
+
+                chunk_queue.put(None)  # Signal complete
+
+
 def main(args):
     Config(args.config_file)
     continuous_scan = ContinuousScan(
@@ -244,22 +319,9 @@ def main(args):
 
     continuous_scan.setup_camera()
 
-    with h5py.File(continuous_scan.hdf_file, "w") as f:
-        root_group = f.create_group("scan_data")
-        data_group = root_group.create_group("image_data")
-        continuous_scan.setup_hdf5_file(data_group)
-
-        processes = []
-        for i in range(2):
-            process = multiprocessing.Process(target=continuous_scan.client_worker, args=(i, continuous_scan, data_group))
-            processes.append(process)
-            process.start()
-
-        for process in processes:
-            process.join()
 
     continuous_scan.perform_continuous_scan()
-    print(f"Saved data in {continuous_scan.hdf_file}")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
