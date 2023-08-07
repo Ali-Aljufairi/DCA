@@ -234,7 +234,6 @@ if __name__ == "__main__":
         image_size_x,
         image_size_y,
         image_counter,
-        num_images,
         acq_mode,
         start_acq,
         acq_status,
