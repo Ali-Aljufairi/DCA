@@ -47,6 +47,17 @@ class ContinuousScan:
         self.num_images = int(np.ceil(self.total_distance / self.step_size))
         self.zmq_port = 1234
         self.zmq_host = "localhost"
+        self.context = zmq.Context()
+        self.socket = self.context.socket(zmq.PULL)
+        self.socket.bind(f"tcp://localhost:1234")
+        self.queue = multiprocessing.Queue()
+
+    def receive_data_via_zmq(self):
+        while True:
+            data = self.socket.recv_pyobj()
+            if data is None:
+                break
+            self.queue.put(data)
 
     def calculate_total_time(self, fps):
         time_per_frame = 1/fps
@@ -83,45 +94,50 @@ class ContinuousScan:
         epics.caput(self.trigger_source, 0)
         epics.caput(self.camera_acq_pv, 0)
 
-    def perform_continuous_scan(self, zmq_port, zmq_host):
+    def save_to_hdf5(self, data):
+        with h5py.File(self.hdf_file, 'a') as hdf:
+            group_name = f'image_{self.image_counter}'
+            hdf.create_group(group_name)
+            hdf[group_name]['image_data'] = data
+
+    def process_image_data(self):
+        while True:
+            if self.queue.empty():
+                time.sleep(0.1)
+                continue
+            data = self.queue.get()
+            # Save the acquired image data to HDF5
+            self.save_to_hdf5(data)
+
+    def perform_continuous_scan(self):
         # Connect to the motion stage and get the fps value and setup the camera
         self.setup_camera()
         self.motion_stage = epics.Motor(self.motion_stage_pv)
         fps = epics.caget(self.fps_pv)
-        self.move_epics_motor(300)
         self.calculate_velocity(fps)
         accel_d = self.calculate_accel_distance()
         print(f"accel_d: {accel_d}, type: {type(accel_d)}")
         self.move_epics_motor(0 - float(accel_d))
         print(f"Accelerating to steady speed...")
-        self.move_epics_motor(self.total_distance + float(accel_d))
 
-
-
-
-
-
-
-
-    def start_processes(self, zmq_port, zmq_host):
-        # Create a Queue to hold the data chunks
-        chunk_queue = multiprocessing.Queue()
-
-        # Start process to receive data from ZMQ and put in queue
-        zmq_process = multiprocessing.Process(
-            target=self.receive_zmq_data, args=(zmq_port, zmq_host, chunk_queue))
+        zmq_process = multiprocessing.Process(target=self.receive_data_via_zmq)
         zmq_process.start()
 
-        # Start process to take chunks from queue and reshape/save
-        reshape_process = multiprocessing.Process(
-            target=self.reshape_and_save, args=(chunk_queue,))
-        reshape_process.start()
+        processing_process = multiprocessing.Process(
+            target=self.process_image_data)
+        processing_process.start()
+        for _ in range(self.num_images):
+            epics.caput(self.start_acq, 1)  # Trigger image acquisition
+            time.sleep(self.exposure_time)  # Wait for exposure to complete
+            # Capture and process the acquired image data
+            image_data = self.image_data  # Replace with actual image data retrieval
+            self.queue.put(image_data)
 
-        # Join processes to wait for completion
-        zmq_process.join()
-        reshape_process.join()
+        # Stop the ZMQ and processing processes
+        zmq_process.terminate()
+        processing_process.terminate()
 
-
+        self.move_epics_motor(self.total_distance + float(accel_d))
 
 
 def main(args):
