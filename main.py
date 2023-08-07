@@ -179,51 +179,38 @@ class ContinuousScan:
             print(f"Saved data in {self.hdf_file}")
 
 
-def reshape_and_save_image_chunk(data_chunk, chunk_idx, stepscan_obj):
-    data = np.frombuffer(data_chunk, dtype=np.uint8)
-    data = data.reshape((stepscan_obj.image_size_y, stepscan_obj.image_size_x))
-    return data
+    def reshape_and_save_image_chunk(self,data_chunk, chunk_idx, stepscan_obj):
+        data = np.frombuffer(data_chunk, dtype=np.uint8)
+        data = data.reshape((stepscan_obj.image_size_y, stepscan_obj.image_size_x))
+        return data
 
-def reshape_and_save_worker(client_id, data_chunk, chunk_idx, stepscan_obj, data_group):
-    reshaped_data = reshape_and_save_image_chunk(data_chunk, chunk_idx, stepscan_obj)
-    with data_group.get_lock():
-        stepscan_obj.save_image_to_hdf5(data_group, chunk_idx, stepscan_obj.motion_stage.position, reshaped_data)
-    print(f"Client {client_id} reshaped and saved data for chunk {chunk_idx}")
+    def reshape_and_save_worker(self,client_id, data_chunk, chunk_idx, stepscan_obj, data_group):
+        reshaped_data = self.reshape_and_save_image_chunk(data_chunk, chunk_idx, stepscan_obj)
+        with data_group.get_lock():
+            stepscan_obj.save_image_to_hdf5(data_group, chunk_idx, stepscan_obj.motion_stage.position, reshaped_data)
+        print(f"Client {client_id} reshaped and saved data for chunk {chunk_idx}")
 
-def client_worker(client_id, data_chunks, stepscan_obj, data_group, sync_event):
-    context = zmq.Context()
-    socket = context.socket(zmq.REQ)
-    socket.connect("tcp://localhost:1234")
+    def client_worker(self,client_id, data_chunks, stepscan_obj, data_group, sync_event):
+        context = zmq.Context()
+        socket = context.socket(zmq.REQ)
+        socket.connect("tcp://localhost:1234")
 
-    sync_event.wait()  # Wait for the synchronization event from the server
-    sync_event.clear()  # Clear the event for future synchronization
+        sync_event.wait()  # Wait for the synchronization event from the server
+        sync_event.clear()  # Clear the event for future synchronization
 
-    data = socket.recv()
+        data = socket.recv()
 
-    chunk_size = stepscan_obj.image_size_x * stepscan_obj.image_size_y
-    num_chunks = len(data) // chunk_size
+        chunk_size = stepscan_obj.image_size_x * stepscan_obj.image_size_y
+        num_chunks = len(data) // chunk_size
 
-    for chunk_idx in range(num_chunks):
-        chunk_start = chunk_idx * chunk_size
-        chunk_end = chunk_start + chunk_size
-        data_chunk = data[chunk_start:chunk_end]
-        reshape_and_save_worker(client_id, data_chunk, chunk_idx, stepscan_obj, data_group)
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Step Scan using FLIR camera and MICOS stage.")
-    parser.add_argument("exposure_time", type=float,
-                        help="Exposure time for the FLIR camera.")
-    parser.add_argument("overall_distance", type=float,
-                        help="Overall distance to scan with the MICOS stage.")
-    parser.add_argument("step_size", type=float,
-                        help="Step size for each scan step.")
-    parser.add_argument("--config_file", default="config.json",
-                        help="JSON file containing PV names. (Default: config.json)")
-    args = parser.parse_args()
-
-    sync_event = multiprocessing.Event()
-
+        for chunk_idx in range(num_chunks):
+            chunk_start = chunk_idx * chunk_size
+            chunk_end = chunk_start + chunk_size
+            data_chunk = data[chunk_start:chunk_end]
+            self.reshape_and_save_worker(client_id, data_chunk, chunk_idx, stepscan_obj, data_group)
+            
+def main(args):
+    Config(args.config_file)
     continuous_scan = ContinuousScan(
         args.exposure_time,
         args.overall_distance,
@@ -234,6 +221,7 @@ if __name__ == "__main__":
         image_size_x,
         image_size_y,
         image_counter,
+        num_images,
         acq_mode,
         start_acq,
         acq_status,
@@ -249,23 +237,35 @@ if __name__ == "__main__":
         enable_ZMQ_Array,
         enable_ZMQ_Callbacks,
         zmq_port,
-        zmq_host,
-        num_images)
+        zmq_host)
 
-    # Create or open an HDF5 file to store the data
+    continuous_scan.setup_camera()
+
     with h5py.File(continuous_scan.hdf_file, "w") as f:
         root_group = f.create_group("scan_data")
         data_group = root_group.create_group("image_data")
         continuous_scan.setup_hdf5_file(data_group)
 
-        # Start the reshape process with synchronization event
-        reshape_process = multiprocessing.Process(target=client_worker, args=(0, 50, continuous_scan, data_group, sync_event))
-        reshape_process.start()
+        processes = []
+        for i in range(args.num_clients):
+            process = multiprocessing.Process(target=continuous_scan.client_worker, args=(i, continuous_scan, data_group))
+            processes.append(process)
+            process.start()
 
-        # Perform the continuous scan
+        for process in processes:
+            process.join()
+
         continuous_scan.perform_continuous_scan()
-
-        sync_event.set()  # Set the synchronization event to signal the reshape process to continue
-        reshape_process.join()
-
-    print(f"Saved data in {continuous_scan.hdf_file}")
+        print(f"Saved data in {continuous_scan.hdf_file}")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Step Scan using FLIR camera and MICOS stage.")
+    parser.add_argument("exposure_time", type=float,
+                        help="Exposure time for the FLIR camera.")
+    parser.add_argument("overall_distance", type=float,
+                        help="Overall distance to scan with the MICOS stage.")
+    parser.add_argument("step_size", type=float,
+                        help="Step size for each scan step.")
+    parser.add_argument("--config_file", default="config.json",
+                        help="JSON file containing PV names. (Default: config.json)")
+    args = parser.parse_args()
