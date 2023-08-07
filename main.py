@@ -199,9 +199,13 @@ class ContinuousScan:
         sync_event.clear()  # Clear the event for future synchronization
 
         data = socket.recv()
+        
+        # write data to txt file for debugging
+        with open(f"client_{client_id}.txt", "wb") as f:
+            f.write(data)
 
         chunk_size = stepscan_obj.image_size_x * stepscan_obj.image_size_y
-        num_chunks = len(data) // chunk_size
+        num_chunks =  2448*2048// chunk_size
 
         for chunk_idx in range(num_chunks):
             chunk_start = chunk_idx * chunk_size
