@@ -47,7 +47,7 @@ class ContinuousScan:
         self.num_images = int(np.ceil(self.total_distance / self.step_size))
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.PULL)
-        self.socket.bind(f"tcp://*:1234")
+        self.socket.bind(f"tcp://127.0.0.1:1234")
         self.queue = multiprocessing.Queue()
 
     def receive_data_via_zmq(self):
